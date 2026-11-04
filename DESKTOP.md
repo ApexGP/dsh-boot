@@ -134,9 +134,36 @@ then fully quit it before running dsh plugin --profile desktop.
 ## 五、测试
 
 ```bash
-npm test     # 11 套冒烟测试（动画 + 壁纸 + 合并契约 + 坐标 + 包校验）
+npm test     # 14 套冒烟测试（动画 + 壁纸 + 合并契约 + 坐标 + 包校验 + macOS）
 ```
 
 `test/smoke-desktop-boot.mjs` 就是桌面端自举那 41 项断言的所在：
 它把 `lib/client.js` 按 ModuleLoader 的方式跑起来，用最小 DOM stub 断言
 「Host 没注入时自举 / Host 注入过时不重复 / 该不播时不播 / 失败时把页面还回去」。
+
+`test/smoke-macos.mjs` 覆盖 macOS 的安装 / 更新 / 回滚 / 诊断脚本（文件清单、`sh -n` 语法、
+关键契约、profile-json 功能、`--check-only` 不写文件）。
+
+---
+
+## 六、macOS 桌面端（v2.16.11 起）
+
+插件本体在 macOS 上完全一样（同一份 `lib/` + `preview/`），差异只在「装 / 卸 / 更新」这些外围脚本：
+Windows 用 PowerShell，macOS 用 POSIX sh + `.command` 双击入口。
+
+| | Windows | macOS |
+|---|---|---|
+| 用户数据目录 | `%USERPROFILE%\.dsh` | `~/.dsh` |
+| 桌面端位置 | `%LOCALAPPDATA%\Programs\DeepSeek Harness` | `/Applications/DeepSeek Harness.app` |
+| 自带 CLI | `resources\runtime\cli\bin\dsh.cmd` | `DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh` |
+| 双击安装 | `安装.cmd` | `安装-mac.command` |
+| 卸载 / 诊断 / 预览 | `卸载.cmd` / `诊断.cmd` / `打开预览.cmd` | `卸载-mac.command` / `诊断-mac.command` / `打开预览.command` |
+| 自动更新 | 宿主起 PowerShell 跑 `tools/update-apply.ps1` | 宿主打开 Terminal 跑 `tools/update-apply.sh` |
+| 更新前回滚按钮 | 桌面「紧急回滚-V<版本>…cmd」 | 桌面「紧急回滚-V<版本>…command」 |
+
+macOS 注意事项：
+
+- 桌面端建议**完全退出**（窗口 + 菜单栏图标）后再安装 / 更新：运行中写入 `~/.dsh/profiles/desktop/package.json` 可能与桌面端自身读写竞争，装完需要重启 DSH 才生效。
+- 下载来的 `.command` 第一次双击可能提示「无法打开，因为无法验证开发者」（Gatekeeper 对下载脚本的通用限制）：右键 → 打开，或在终端 `chmod +x` 后运行。
+- 自动更新会在 Terminal 里等 DSH 退出（默认最多 15 分钟）；**关掉那个 Terminal 窗口 = 中止更新**。失败会恢复旧版本目录和配置，日志写桌面「dsh-boot-suite 更新日志 <时间戳>.txt」。
+- 安装 / 卸载 / 回滚 / 诊断都是纯 POSIX sh，macOS 自带 `/bin/sh` 即可，不需要装 PowerShell、Homebrew 或额外依赖。

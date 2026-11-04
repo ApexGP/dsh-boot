@@ -1,3 +1,14 @@
+## [2.16.11] — 2026-11-05
+
+- **新增 macOS 支持**：安装 / 卸载 / 回滚 / 诊断 / 自动更新全部补齐 POSIX sh 版本（`tools/install-macos.sh`、`emergency-uninstall.sh`、`rollback-version.sh`、`doctor.sh`、`update-apply.sh`、`tools/lib/mac-common.sh`、`tools/lib/profile-json.mjs`），并在仓库根目录提供双击入口 `安装-mac.command` / `卸载-mac.command` / `诊断-mac.command` / `打开预览.command`。
+- **macOS 自动更新**：设置页「立即更新」在 macOS 上会打开 Terminal 运行 `tools/update-apply.sh`，等 DSH 完全退出后替换版本并自动重开；支持 curl 下载兜底，失败会恢复旧版本目录与配置，日志写桌面「dsh-boot-suite 更新日志」。
+- **macOS 更新前回滚**：安装/更新前自动在桌面生成「紧急回滚-V<旧版本>（先完全退出 DSH 再双击）.command」，新版打不开时双击即可切回更新前的插件版本，不动用户设置。
+- **macOS 一键在线安装**：新增 `install-online.sh`（`curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh`）。
+- **修复 macOS 上聊天壁纸「循环视频」找不到文件**：`lib/host-wallpaper.js` 之前把路径里的 `/` 转成 Windows 反斜杠再喂给 fs，macOS 上 `existsSync` 失败、还被判成「不在允许目录内」（17 项冒烟测试失败）；现在直接使用原始路径，Windows 行为不变。
+- **发布打包跨平台**：`tools/build-release.mjs` 在 macOS 上用系统 `zip` / `unzip` 打包与校验（保留可执行位，并补 UTF-8 文件名标志位，保证 Windows 解压中文名不乱码），支持 `DSH_RELEASE_OUT` 指定输出目录；Windows 仍走 PowerShell Compress-Archive，行为不变。
+- **新增 macOS 专项冒烟测试** `test/smoke-macos.mjs`：文件清单、`sh -n` 语法、关键契约、profile-json 功能、`--check-only` 不写文件，已接入 `npm test`。
+- 跨平台工具：`tools/motion-check.mjs` / `tools/export-frames.mjs` 的 Chrome 默认路径按平台自动探测（macOS 用 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，仍可用 `CHROME_PATH` 覆盖）；`cordis.patch.yml` 注释补 macOS 安装示例。
+
 ## [2.16.10] — 2026-11-04
 
 - 设置页「鸣谢」新增两位原作者：皮肤「封锁橙」原作者 之一ONETHING（B 站）、余额表盘原作者 胡萨尔cC（B 站 / @goooooooeg），并附仓库链接。

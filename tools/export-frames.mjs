@@ -28,8 +28,30 @@ const H = Number(args.height) || 720
 const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const tplDir = path.join(root, 'templates', tplId)
 const outDir = path.resolve(args.out || path.join('05-素材', '导出', tplId))
-const chromePath = args.chrome || process.env.CHROME_PATH ||
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'
+/* Chrome 可执行文件：--chrome= / CHROME_PATH 优先；否则按平台取默认安装位置。
+   Windows 保持原来的路径不动；macOS 的 Chrome 在 .app 里面，要用真实的二进制而不是 app 目录。 */
+function findChrome() {
+  const custom = args.chrome || process.env.CHROME_PATH
+  if (custom) return custom
+  const candidates = process.platform === 'win32'
+    ? ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe']
+    : process.platform === 'darwin'
+      ? [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        path.join(os.homedir(), 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+      ]
+      : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium']
+  return candidates.find((p) => fs.existsSync(p)) || candidates[0]
+}
+const chromePath = findChrome()
+if (!fs.existsSync(chromePath)) {
+  console.error('找不到 Chrome: ' + chromePath)
+  console.error('请用 --chrome=<可执行文件路径> 或环境变量 CHROME_PATH 指定 Chrome。')
+  console.error(process.platform === 'darwin'
+    ? 'macOS 默认位置：/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    : 'Windows 默认位置：C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe')
+  process.exit(2)
+}
 
 function readTpl() {
   const raw = fs.readFileSync(path.join(tplDir, 'template.json'), 'utf8')

@@ -44,6 +44,22 @@ Each half is **independent**: a broken animation never breaks the wallpaper and 
 
 Requires Node ≥ 20. The desktop app must be fully quit — the profile's `package.json` is locked while it runs.
 
+### macOS (v2.16.11+)
+
+The plugin itself is identical on macOS; install / uninstall / update are POSIX sh scripts with double-click entries (no PowerShell needed).
+
+- **A (recommended)**: download the release **`dsh-boot-suite-win.zip`** (the name says win, but it is the cross-platform package) → unzip → fully quit DeepSeek Harness (window + menu-bar icon) → double-click **`安装-mac.command`**. If Gatekeeper refuses to open it the first time: right-click → Open.
+- **B (one line, online install)**:
+
+  ~~~sh
+  curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+  ~~~
+
+- **C (CLI)**: `dsh plugin --profile desktop add link:<path-to-this-repo>`. The bundled `dsh` lives at `/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`.
+
+Maintenance entries on macOS (repo root): `卸载-mac.command` (uninstall), `诊断-mac.command` (desktop diagnostic report), `打开预览.command` (offline preview).
+Auto-update works the same way: "立即更新" opens Terminal and runs `tools/update-apply.sh` after DeepSeek Harness quits, then relaunches it. Before each update a desktop rollback button `紧急回滚-V<old>…command` is created — with the app fully quit, double-click it to switch back to the previous plugin version (settings untouched).
+
 ## Safety kit
 
 This plugin injects into the **first paint**, so a bug can mean a full black screen where even "skip" is unreachable.
@@ -64,12 +80,13 @@ keeping your settings untouched. After a successful update the old button is rep
 you do not need to delete it. Every rollback writes a `dsh-boot-suite 回滚日志` log on the desktop.
 
 Kill every `DeepSeek Harness` process, run the script, relaunch. Diagnostics land in `~/.dsh/boot-suite-diag.log`.
+On macOS use `卸载-mac.command` / `诊断-mac.command` / `打开预览.command` instead (quit DeepSeek Harness first: window + menu-bar icon).
 
 ## Tests
 
     npm test
 
-13 self-contained smoke suites, ~998 assertions, no runtime dependencies.
+14 self-contained smoke suites (including a macOS-specific one), ~1000 assertions, no runtime dependencies.
 
 ## License
 

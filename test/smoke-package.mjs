@@ -216,4 +216,26 @@ if (!clientSrc.includes('之一ONETHING')) throw new Error('鸣谢缺少皮肤�
 if (!clientSrc.includes('胡萨尔cC')) throw new Error('鸣谢缺少余额表盘原作者胡萨尔cC')
 if (!clientSrc.includes('oenthing/blockade-orange-dsh-skin')) throw new Error('鸣谢缺少皮肤仓库链接')
 if (!clientSrc.includes('goooooooeg/dsh-balance-hud')) throw new Error('鸣谢缺少表盘仓库链接')
-console.log('ok  package.json version=' + pkg.version + '，无 BOM，关键文件齐全（含更新前回滚 checkpoint）');
+/* v2.16.11：macOS 支持 —— 同一份发布包必须能直接在 mac 上安装/更新/回滚/诊断 */
+const MAC_FILES = [
+  'tools/install-macos.sh', 'tools/emergency-uninstall.sh', 'tools/rollback-version.sh',
+  'tools/doctor.sh', 'tools/update-apply.sh', 'tools/lib/mac-common.sh',
+  'tools/lib/profile-json.mjs', 'install-online.sh',
+  '安装-mac.command', '卸载-mac.command', '诊断-mac.command', '打开预览.command',
+];
+for (const f of MAC_FILES) {
+  if (!fs.existsSync(path.join(root, f))) throw new Error('缺少 macOS 支持文件：' + f);
+}
+/* 根目录下的 mac 双击入口与在线安装器必须进 npm 包（tools/ 目录本身整包包含） */
+for (const f of ['安装-mac.command', '卸载-mac.command', '诊断-mac.command', '打开预览.command', 'install-online.sh']) {
+  if (!(pkg.files || []).includes(f)) throw new Error('package.json 的 files 缺少 macOS 根文件：' + f);
+}
+const installMacSh = fs.readFileSync(path.join(root, 'tools/install-macos.sh'), 'utf8');
+for (const needle of ['--check-only', '--force', '--profiles', '紧急回滚-V', 'DSH_BOOT_SUITE_ROLLBACK', 'verify-installed', 'managed exclusively']) {
+  if (!installMacSh.includes(needle)) throw new Error('install-macos.sh 缺少关键逻辑：' + needle);
+}
+const updateApplySh = fs.readFileSync(path.join(root, 'tools/update-apply.sh'), 'utf8');
+for (const needle of ['--zip', '--version', 'unzip -t', 'pkg.new', 'pkg.old', 'install-macos.sh', '更新日志']) {
+  if (!updateApplySh.includes(needle)) throw new Error('update-apply.sh 缺少关键逻辑：' + needle);
+}
+console.log('ok  package.json version=' + pkg.version + '，无 BOM，关键文件齐全（含更新前回滚 checkpoint 与 macOS 安装/更新/回滚/诊断脚本）');

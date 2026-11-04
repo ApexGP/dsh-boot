@@ -6,7 +6,7 @@
 
 [![release](https://img.shields.io/github/v/release/LeeRolling/dsh-boot-suite?label=release)](https://github.com/LeeRolling/dsh-boot-suite/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![platform](https://img.shields.io/badge/platform-Windows%20%7C%20Web-lightgrey)](#安装)
+[![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](#安装)
 
 ![开机动画主画面](docs/hero.png)
 
@@ -88,6 +88,35 @@ https://github.com/LeeRolling/dsh-boot-suite/releases/latest/download/dsh-boot-s
 
 > npm 上的是标准插件包（含内置模板与素材），安装后同样在设置页看到「启动动画」「聊天背景」。
 > 如果 npm 版本落后于最新 Release，以 Release 的一键安装包为准。
+
+### macOS（v2.16.11 起）
+
+macOS 上插件本体完全一样，安装 / 卸载 / 更新换成了 POSIX sh 脚本 + `.command` 双击入口，
+不需要 PowerShell。**安装前同样先完全退出 DeepSeek Harness（窗口 + 菜单栏图标）**。
+
+- **方式 A（推荐，双击安装）**：下载 Release 的 **`dsh-boot-suite-win.zip`**（名字带 win，但它是**跨平台包**）→ 双击解压 → 双击 **`安装-mac.command`**。第一次打不开就右键 → 打开（Gatekeeper 对下载脚本的通用限制）。
+- **方式 B（一行命令在线安装）**：
+
+  ~~~sh
+  curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+  ~~~
+
+- **方式 C（命令行）**：`dsh plugin --profile desktop add link:<仓库路径>`。macOS 的 `dsh` 在
+  `/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`，不在 PATH 里就用完整路径。
+
+mac 上的维护入口（都在仓库根目录，双击即可）：
+
+| 文件 | 干什么 |
+|---|---|
+| `卸载-mac.command` | 彻底卸载插件（profile 里的配置会先备份到 `~/.dsh/profiles/<profile>/_backup-uninstall-<时间戳>/`） |
+| `诊断-mac.command` | 在桌面生成 `dsh诊断-<时间戳>.txt` 诊断报告 |
+| `打开预览.command` | 打开离线预览页 |
+| `安装-mac.command` | 安装 / 更新，支持 `sh tools/install-macos.sh --check-only` 只看计划 |
+
+**自动更新在 macOS 上同样可用**：设置页「立即更新」会打开 Terminal 运行 `tools/update-apply.sh`，
+等你完全退出 DSH 后解压新版本、跑安装器并自动重开。更新前同样会在桌面生成
+「紧急回滚-V<旧版本>（先完全退出 DSH 再双击）.command」，新版打不开时双击它即可切回。
+详见 [INSTALL.md](INSTALL.md) 的 macOS 章节。
 
 ---
 
@@ -186,6 +215,10 @@ https://github.com/LeeRolling/dsh-boot-suite/releases/latest/download/dsh-boot-s
 
 用法：任务管理器结束全部 `DeepSeek Harness` 进程 → 双击脚本 → 重开客户端。
 
+macOS 上对应的是根目录的 `卸载-mac.command` / `诊断-mac.command` / `打开预览.command`（先完全退出 DSH：窗口 + 菜单栏图标），
+脚本本体是 `tools/emergency-uninstall.sh` / `tools/doctor.sh` / `tools/rollback-version.sh`；
+卸载前会把 profile 里的配置备份到 `~/.dsh/profiles/<profile>/_backup-uninstall-<时间戳>/`。
+
 诊断日志写在 `~/.dsh/boot-suite-diag.log`（首屏注入走了哪条通道、自愈有没有触发、壁纸半侧卡在哪一步）。
 
 ---
@@ -201,8 +234,8 @@ https://github.com/LeeRolling/dsh-boot-suite/releases/latest/download/dsh-boot-s
     preview/
       index.html        交互式离线预览（带设置面板，直接浏览器打开）
       demo.html         纯净演示页（无面板，截图/录屏用）
-    test/               13 套冒烟测试，零依赖
-    tools/              急救 / 回滚 / 备份
+    test/               14 套冒烟测试（含 macOS 专项），零依赖
+    tools/              急救 / 回滚 / 备份（Windows PowerShell + macOS POSIX sh）
     docs/               README 用的图
 
 ### 改代码前先读这三条
@@ -217,7 +250,7 @@ https://github.com/LeeRolling/dsh-boot-suite/releases/latest/download/dsh-boot-s
 
     npm test
 
-13 套冒烟测试、约 998 项断言，零运行时依赖、零测试框架。改 `lib/` 下任何文件都要重跑。
+14 套冒烟测试（含 `test/smoke-macos.mjs` 的 macOS 专项）、约 1000 项断言，零运行时依赖、零测试框架。改 `lib/` 下任何文件都要重跑。
 
 ---
 

@@ -23,12 +23,35 @@ const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith
 }))
 const TEMPLATE = args.template || 'deep-sonar'
 const SPEED = Number(args.speed || 3)
-const CHROME = args.chrome || process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 const PORT = 9333
+
+/* Chrome 可执行文件：--chrome= / CHROME_PATH 优先；否则按平台取默认安装位置。
+   Windows 保持原来的路径不动；macOS 的 Chrome 在 .app 里面，要用真实的二进制而不是 app 目录。 */
+function findChrome() {
+  const custom = args.chrome || process.env.CHROME_PATH
+  if (custom) return custom
+  const candidates = process.platform === 'win32'
+    ? ['C:/Program Files/Google/Chrome/Application/chrome.exe']
+    : process.platform === 'darwin'
+      ? [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        path.join(os.homedir(), 'Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+      ]
+      : ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium']
+  return candidates.find((p) => fs.existsSync(p)) || candidates[0]
+}
+const CHROME = findChrome()
 
 const tplPath = path.join(ROOT, 'templates', TEMPLATE, 'template.json')
 if (!fs.existsSync(tplPath)) { console.error('模板不存在: ' + tplPath); process.exit(2) }
-if (!fs.existsSync(CHROME)) { console.error('找不到 Chrome: ' + CHROME + '（用 --chrome= 指定）'); process.exit(2) }
+if (!fs.existsSync(CHROME)) {
+  console.error('找不到 Chrome: ' + CHROME)
+  console.error('请用 --chrome=<可执行文件路径> 或环境变量 CHROME_PATH 指定 Chrome。')
+  console.error(process.platform === 'darwin'
+    ? 'macOS 默认位置：/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+    : 'Windows 默认位置：C:/Program Files/Google/Chrome/Application/chrome.exe')
+  process.exit(2)
+}
 const tpl = JSON.parse(fs.readFileSync(tplPath, 'utf8'))
 const libUrl = 'file:///' + path.join(ROOT, 'lib').replace(/\\/g, '/').replace(/ /g, '%20')
 const tmp = path.join(os.tmpdir(), 'dsh-motion-' + Date.now() + '.html')

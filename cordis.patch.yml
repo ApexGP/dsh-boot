@@ -4,7 +4,8 @@
 # 浏览器半侧由 package.json 的 dsh.client 声明、宿主自动组装。
 #
 # 安装（不手改 profile patch）：
-#   dsh plugin --profile desktop add link:F:\Lee的GitHub仓库\DeepSeek harness 开机动画\01-源码
+#   Windows: dsh plugin --profile desktop add link:F:\Lee的GitHub仓库\DeepSeek harness 开机动画\01-源码
+#   macOS:   dsh plugin --profile desktop add link:/Users/<you>/dsh-boot-suite
 - insert:
     - id: dsh-boot-suite
       name: dsh-boot-suite
