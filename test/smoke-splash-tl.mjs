@@ -106,7 +106,7 @@ function makeEl(tag) {
 }
 
 /* ── 起一个受控 rAF 的页面环境，跑一遍 splash.js ─────────────────────────── */
-function boot(cfgOverride, template) {
+function boot(cfgOverride, template, warnSink) {
   MARKUP = ''
   lookupCache.clear()
   const root = makeEl('div')
@@ -123,6 +123,8 @@ function boot(cfgOverride, template) {
     getElementById: (id) => (id === 'dsh-startup-root' ? root : null),
     createElement: (t) => makeEl(t),
     createElementNS: (_ns, t) => makeEl(t),
+    createDocumentFragment: () => { const f = makeEl('div'); f.nodeType = 11; return f },
+    createTextNode: (t) => { const n = makeEl('#text'); n.textContent = String(t); return n },
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener() {},
@@ -169,10 +171,19 @@ function boot(cfgOverride, template) {
   windowStub.window = windowStub
   windowStub.__DSH_STARTUP_TEMPLATE__ = template
 
+  /* splash.js 的兜底分支走 console.warn（例如「动画异常，直接揭幕」）。
+     传入 warnSink 时把它收集起来，用于离线预览回归断言。 */
+  const consoleStub = warnSink
+    ? {
+        log() {}, info() {},
+        warn: (...a) => warnSink.push(a.map((x) => String(x && x.message ? x.message : x)).join(' ')),
+        error: (...a) => warnSink.push('ERROR ' + a.map((x) => String(x && x.message ? x.message : x)).join(' ')),
+      }
+    : console
   const sandbox = {
     window: windowStub,
     document: documentStub,
-    console,
+    console: consoleStub,
     Promise, Object, Array, JSON, String, Number, Math, Date, Error, RegExp, isFinite,
     setTimeout: windowStub.setTimeout,
     clearTimeout: windowStub.clearTimeout,
@@ -250,6 +261,28 @@ check('转场引擎收尾后覆盖层无残留（overlays 归零）', state().ov
   check('★ 默认 dissolve 路径也没有 dsu-out-content（不再多等 220ms 内嵌淡出）',
     !page2.root._classAdds.includes('dsu-out-content'),
     page2.root._classAdds.filter((c) => /out-content|handoff/.test(c)).join(','))
+}
+
+/* ═══ 离线预览回归（2026-11-05）：preview/index.html 不注入 __DSH_STARTUP_TEMPLATE__ ═══
+ * 旧代码在 waitTimer 里无脑访问 TEMPLATE.gates：TEMPLATE 为 null 时每帧抛 TypeError，
+ * 被外层 catch 当成「动画异常，直接揭幕」→ 预览页看不到动画、点重播也没反应。
+ * 这里真跑到第一个等待点，断言兜底分支没被触发（用真实 timer 泵 + 微任务）。 */
+console.log('\n=== 离线预览回归：没有注入模板（TEMPLATE=null）也不许直接揭幕 ===')
+{
+  const warns = []
+  const rv = boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 2 }, null, warns)
+  check('无模板场景初始化不抛异常', rv.thrown === null, rv.thrown && rv.thrown.message)
+  /* 把 >400ms 的排队定时器逐批泵掉，并在每批之间推微任务：
+     第一幕的等待点一旦被调用，旧代码就会在这里抛错并触发兜底 warn。 */
+  for (let round = 0; round < 40; round++) {
+    const batch = rv.timers.splice(0)
+    for (const t of batch) { try { t.fn() } catch (e) { /* 动画内部异常由 splash.js 自己兜底 */ } }
+    await flush(); await flush()
+    if (!rv.timers.length && round > 6) break
+  }
+  check('★ 无模板场景没有触发「动画异常，直接揭幕」兜底', !warns.some((w) => w.includes('动画异常')), warns.join(' | '))
+  check('无模板场景仍暴露 __DSH_STARTUP_API__（预览页重播按钮依赖）',
+    !!(rv.windowStub.__DSH_STARTUP_API__ && typeof rv.windowStub.__DSH_STARTUP_API__.replay === 'function'))
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)

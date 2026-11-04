@@ -1,4 +1,4 @@
-# dsh-boot-suite
+# dsh-boot
 
 [简体中文](README.md) | [English](README.en.md)
 
@@ -102,4 +102,4 @@ MIT（只覆盖作者原创代码与文案）。视觉风格参考自动画作�
 
 原作者：**沈宏宏**；合并、修复与维护：LeeRolling。参考作品与第三方素材清单见 [CREDITS.md](CREDITS.md)。
 
-本仓库是社区维护的 fork（[ApexGP/dsh-boot](https://github.com/ApexGP/dsh-boot)），上游仍是原作者 LeeRolling 维护的 dsh-boot-suite 仓库；原作者署名与素材授权保持不变。
+本仓库是社区维护的 fork（[ApexGP/dsh-boot](https://github.com/ApexGP/dsh-boot)），上游仍是原作者 [LeeRolling](https://github.com/LeeRolling) 维护的 dsh-boot-suite 仓库；原作者署名与素材授权保持不变。

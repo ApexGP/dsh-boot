@@ -153,6 +153,7 @@ macOS 脚本对照（Windows 能力全部有对应）：
 | `spawn('explorer.exe')` 无 error 监听 | mac 上点「打开目录」→ ENOENT unhandled error 直接打崩宿主进程 | 统一 `openInFileManager()`：win32 explorer / darwin open / 其他 xdg-open，且必须挂 `'error'` 监听 |
 | `$VAR（中文` | macOS bash 3.2 把中文首字节吞进变量名 → 变量变空、输出乱码；回滚按钮名缺版本号 | 全部写 `${VAR}`；`test/smoke-macos.mjs` 有静态扫描防复发 |
 | .command 双击没反应 | Finder 双击 .sh 不执行；下载来的脚本被 Gatekeeper 拦 | 入口用 `.command` 扩展名 + chmod 755 + 生成后读回校验；文档提示「右键 → 打开」 |
+| 离线预览页「没反应」 | preview/index.html 不注入 `__DSH_STARTUP_TEMPLATE__`，splash.js 的 waitTimer 无脑读 `TEMPLATE.gates` 抛 TypeError，被兜底当成「动画异常」瞬间揭幕 → 看不到动画、重播无效 | `TEMPLATE` 访问一律先判空；`test/smoke-splash-tl.mjs` 有「无模板场景不许直接揭幕」回归（假定时器测不到，必须在会 pump 定时器的 tl 测试里做） |
 | 目录重排断了旧版自动更新 | 旧版（≤2.16.10）更新器解压新 zip 后硬性检查并运行 `tools/install.ps1`，目录一搬就报「找不到安装器」，老用户无法升级 | 重排后首版保留 `tools/install.ps1` 兼容垫片（只转发 `tools/windows/install.ps1` + `@args`），`tools/dev/build-release.mjs` 必需清单与 `test/smoke-package.mjs` 都钉住它；下版删除 |
 | tag 与版本号不一致 | release workflow 的 Resolve 步骤直接失败（中文报错），不会发版 | 打 tag 前先改 `package.json` version 并同步 `lib/client.js` 的 `FALLBACK_VERSION`；tag 必须是 `v`+version |
 | 手工 `gh release` 发版 | 绕过 Actions 的测试与 SHA256SUMS 校验，资产可能残缺/漏传 | 只推 tag 让 workflow 建 Release；补发用 `workflow_dispatch` |
