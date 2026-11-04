@@ -1,3 +1,10 @@
+## [2.16.12] — 2026-11-05
+
+- **DSH-Store 上架整改（#1760）**：`package.json` 的 `files` 精简为「运行时必需」——不再随 npm/市场包分发 `test/`、`tools/dev/`、`install-online.*`、`setup.*`、`preview/index.html` 等开发与安装辅助文件（Release zip 仍按整仓打包，不受影响）。扫描面从 96 个源码文件降到 69 个，安全告警从 9 条降到 2 条，且不再有 `shell-mode` 告警（Windows 更新器改为 `cmd.exe /c`，移除 `shell: true`）。
+- **上架预检的剩余项属扫描器能力边界**：本插件必需的音频/视频模板素材（扫描器只放行图片/字体/文本类静态文件）与浏览器半侧的自举脚本注入（首帧兜底/预览重播），按 DSH-Store `registry/README` 的 bounded-source 政策属于「需要人工复核的能力信号」，且政策明确「不要求作者拆包、压缩或删除功能」「扫描预算/覆盖限制由 store-scanner 负责」；已按人工复核路径在提交 Issue 中说明。
+- **社区条目作者**：`submission/data/community/dsh-boot-suite.json` 的 author 补充为 `LeeRolling / ApexGP`（原作者署名保留）。
+- 同时包含 v2.16.11 之后尚未单独发版的修复：离线预览页看不到动画（TEMPLATE 为 null 时直接揭幕）、默认身份 `ApexGP` / `0066` / 等级 `0` 且默认自动播放、自动播放每幕额外停留 1.5s、聊天壁纸「背景图不透明度」默认 60% 与「镜头模糊」默认 15。
+
 ## [2.16.11] — 2026-11-05
 
 - **新增 macOS 支持**：安装 / 卸载 / 回滚 / 诊断 / 自动更新全部补齐 POSIX sh 版本（`tools/macos/install.sh`、`uninstall.sh`、`rollback-version.sh`、`diagnose.sh`、`update-apply.sh`、`tools/macos/lib/mac-common.sh`、`tools/macos/lib/profile-json.mjs`），并在仓库根目录提供双击入口 `setup.command`。

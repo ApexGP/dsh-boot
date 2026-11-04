@@ -316,9 +316,17 @@ if (!/tools\/install-macos\.sh/.test(readText('tools/macos/rollback-version.sh')
   throw new Error('tools/macos/rollback-version.sh 缺少旧布局回退分支（tools/install-macos.sh）');
 }
 
-/* 根目录入口必须进 npm 包（tools/ 整目录本来就在 files 里，不用重复列） */
+/* npm/市场包的文件面只保「运行时必需」（DSH-Store 扫描器按 manifest files 计算 bounded source）：
+   · 仓库里仍要有根入口（Release zip 按整仓打包，不受 npm files 影响）；
+   · 但 npm/市场包里不再带 setup.* / install-online.* / test / tools-dev / preview（开发与安装辅助）。 */
 for (const f of ['setup.cmd', 'setup.command', 'install-online.ps1', 'install-online.sh']) {
-  if (!(pkg.files || []).includes(f)) throw new Error('package.json 的 files 缺少根入口：' + f);
+  if (!fs.existsSync(path.join(root, f))) throw new Error('仓库缺少根入口文件：' + f);
+}
+for (const f of ['lib', 'templates', 'tools/macos', 'tools/windows', 'tools/editor.html', 'cordis.patch.yml']) {
+  if (!(pkg.files || []).includes(f)) throw new Error('package.json 的 files 缺少运行时文件：' + f);
+}
+for (const f of ['test', 'tools/dev', 'install-online.ps1', 'install-online.sh', 'setup.cmd', 'setup.command', 'preview/index.html']) {
+  if ((pkg.files || []).includes(f)) throw new Error('package.json 的 files 不应包含开发/安装辅助文件（会扩大 DSH-Store 扫描面）：' + f);
 }
 const installMacSh = readText('tools/macos/install.sh');
 for (const needle of ['--check-only', '--force', '--profiles', '紧急回滚-V', 'DSH_BOOT_SUITE_ROLLBACK', 'verify-installed', 'managed exclusively']) {

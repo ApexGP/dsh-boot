@@ -1,7 +1,7 @@
 # AGENTS.md · 工作规范（每个会话开始先读这份）
 
 > 这份文件是给"下一个我"看的：上下文被压缩、或者换了会话，先读这里，别重新摸索。
-> 最后更新：2026-11-05 · 版本 2.16.11（新增 macOS 支持 + 仓库整理 + Actions 自动发版；未发版，npm 公共包仍为 2.16.10 之前）
+> 最后更新：2026-11-05 · 版本 2.16.12（macOS 支持 + 仓库整理 + Actions 自动发版 + DSH-Store 上架整改；未发版，npm 公共包仍为 2.16.10 之前）
 
 ## 一、项目坐标
 
@@ -24,6 +24,12 @@
 > **fork 关系（2026-11-05）**：`ApexGP/dsh-boot` 是 `LeeRolling/dsh-boot-suite` 的 fork。
 > 日常提交、下载链接、自动更新都指向 fork；`author` 字段与 submission 的作者归属仍是原作者
 > （沈宏宏 / LeeRolling），不因 fork 改署名。模板商店继续指原作者仓库 `LeeRolling/dsh-boot-suite-templates`。
+>
+> **DSH-Store 上架（2026-11-05，issue #1760）**：自动预检报 `SUBMISSION_SCAN_INCOMPLETE`，已用 DSH-Store 源码在本地复现，剩余原因全部是 bounded-source 扫描器的能力边界，**不要靠删功能过检**：
+> - 音频/视频素材（mp3/wav/mp4，134 个）不在扫描器静态放行类型（只放行图片/字体/文本/样式），这又是插件的核心内容；
+> - 浏览器半侧自举/重播用 `document.createElement('script')` 挂固定 Host 路由的 splash.js，属「动态加载需单独审查」；
+> - `child_process` 仅用于「打开目录」与「自动更新器」，参数为固定数组。
+> 已做的整改：`package.json files` 只保留运行时（见硬规则 16）、去掉更新器 `shell: true`；扫描面 96→70 个源码文件、告警 9→2。剩余按 `registry/README.md` 政策走**人工准入复核**（政策原文：不要求作者拆包/压缩/删除功能，扫描预算与覆盖限制责任方是 store-scanner），请求文本见 `submission/issue-reply-1760.md`。
 
 ## 二、硬规则（违反过，代价很大）
 
@@ -42,6 +48,7 @@
 13. **macOS 的 shell 变量一律写 `${VAR}`**：macOS 的 /bin/sh 是 bash 3.2，`$name（中文` 会把中文首字节吞进变量名（表现为 unset 变量或中文乱码；2026-11-05 实测）。`test/smoke-macos.mjs` 有静态扫描，别让它变红。
 14. **mac 的 `setup.command` 双击入口必须满足**：POSIX sh（macOS 自带 /bin/sh，不依赖 bash 数组/Homebrew/PowerShell）、chmod 755、生成后写后读回校验；更新/回滚要在 Terminal 里可见进度，失败必须恢复旧版本目录与配置。
 15. **脚本文件名一律 ASCII kebab-case**：中文只允许出现在脚本内容与输出里（硬规则 8 的延伸）。根目录只留四个入口脚本（见「项目坐标」），Windows/macOS/开发工具按 `tools/windows/`、`tools/macos/`、`tools/dev/` 分目录；`test/smoke-package.mjs` 会递归扫根目录与 `tools/` 拦非 ASCII 脚本名，别让文件名带中文。
+16. **npm/市场包的文件面只放运行时**：`package.json files` = `lib` / `templates` / `tools/macos` / `tools/windows` / `tools/editor.html` / `cordis.patch.yml` / 文档与 LICENSE；不要包含 `test`、`tools/dev`、`install-online.*`、`setup.*`、`preview`。Release zip 按整仓打包（`build-release` 复制整仓），不受影响；这样 DSH-Store 的 bounded-source 扫描面最小，且不会把开发脚本的子进程告警算到插件头上。`test/smoke-package.mjs` 钉住这条。
 
 ## 三、每轮收尾清单（做完功能必跑）
 
