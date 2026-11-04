@@ -8,12 +8,13 @@
 # 只换插件版本，不碰用户配置（~/.dsh/*.json、模板、底图）。
 #
 # 用法：
-#   sh tools/rollback-version.sh --target-pkg "<旧版本pkg目录>" --profile desktop
-#   sh tools/rollback-version.sh --target-pkg "..." --profile desktop --check-only
-#   sh tools/rollback-version.sh --target-pkg "..." --profile desktop --no-start
+#   sh tools/macos/rollback-version.sh --target-pkg "<旧版本pkg目录>" --profile desktop
+#   sh tools/macos/rollback-version.sh --target-pkg "..." --profile desktop --check-only
+#   sh tools/macos/rollback-version.sh --target-pkg "..." --profile desktop --no-start
 #
 # 选项：
-#   --target-pkg <dir>   更新前那个版本的仓库/解压目录（必须完整，含 tools/install-macos.sh）
+#   --target-pkg <dir>   更新前那个版本的仓库/解压目录（新布局含 tools/macos/install.sh，
+#                        仓库整理前的旧版本目录含 tools/install-macos.sh，两种都支持）
 #   --profile <name>     要回滚的 profile，默认 desktop
 #   --check-only         只校验目标目录与 profile，不改动任何东西
 #   --no-start           回滚成功后不自动打开 DSH
@@ -25,11 +26,10 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
 Say() { printf '%s\n' "$*"; }
 Die() { printf '[x] %s\n' "$*" >&2; exit 1; }
 
-# 公共函数库：repo 里是 tools/lib/；被复制到 $DSH_HOME/boot-suite-updates/ 后是 lib/
+# 公共函数库：始终在脚本同目录的 lib/。安装器把本脚本复制到
+# $DSH_HOME/boot-suite-updates/ 时按同构目录一起复制 lib/mac-common.sh。
 if [ -f "$SCRIPT_DIR/lib/mac-common.sh" ]; then
   . "$SCRIPT_DIR/lib/mac-common.sh"
-elif [ -f "$SCRIPT_DIR/../lib/mac-common.sh" ]; then
-  . "$SCRIPT_DIR/../lib/mac-common.sh"
 else
   printf '[x] 缺少公共函数库：%s\n' "$SCRIPT_DIR/lib/mac-common.sh" >&2
   exit 1
@@ -41,10 +41,12 @@ read_version() {
 
 # 回滚副本会被放到 $DSH_HOME/boot-suite-updates/，那里没有 package.json；有就读版本，没有就只报位置
 VER=''
-if [ -f "$SCRIPT_DIR/package.json" ]; then
+# 仓库布局：本脚本在 tools/macos/，仓库根在上两级；被单独拷出来时同目录有
+# package.json 也能读（两种情况都读不到就只报脚本位置，不影响回滚）
+if [ -f "$SCRIPT_DIR/../../package.json" ]; then
+  VER=$(read_version "$SCRIPT_DIR/../../package.json")
+elif [ -f "$SCRIPT_DIR/package.json" ]; then
   VER=$(read_version "$SCRIPT_DIR/package.json")
-elif [ -f "$(dirname "$SCRIPT_DIR")/package.json" ]; then
-  VER=$(read_version "$(dirname "$SCRIPT_DIR")/package.json")
 fi
 if [ -n "$VER" ]; then
   Say "dsh-boot-suite v$VER"
@@ -58,10 +60,11 @@ usage() {
 dsh-boot-suite —— macOS 紧急回滚
 
 用法：
-  sh tools/rollback-version.sh --target-pkg <旧版本目录> [--profile desktop] [--check-only] [--no-start]
+  sh tools/macos/rollback-version.sh --target-pkg <旧版本目录> [--profile desktop] [--check-only] [--no-start]
 
 选项：
-  --target-pkg <dir>   更新前的版本目录（必须含 package.json / lib/index.js / tools/install-macos.sh）
+  --target-pkg <dir>   更新前的版本目录（必须含 package.json / lib/index.js / 安装器；
+                       新布局安装器在 tools/macos/install.sh，旧版本目录是 tools/install-macos.sh）
   --profile <name>     要回滚的 profile，默认 desktop
   --check-only         只检查目标目录与 profile，不改动任何东西
   --no-start           回滚成功后不自动打开 DSH
@@ -148,8 +151,15 @@ Log "紧急回滚启动，目标目录：$TARGET_PKG"
 TARGET_VER=$(read_version "$TARGET_PKG/package.json")
 [ -n "$TARGET_VER" ] || Fail '目标版本的 package.json 无法解析出版本号'
 [ -f "$TARGET_PKG/lib/index.js" ] || Fail '目标版本缺少 lib/index.js，目录不完整'
-[ -f "$TARGET_PKG/tools/install-macos.sh" ] || Fail '目标版本缺少 tools/install-macos.sh，无法回滚'
+# 目标目录可能是「仓库整理前」发布的旧版本：那时安装器在 tools/install-macos.sh；
+# 新布局在 tools/macos/install.sh。优先新布局，旧版本目录回退旧路径，两者都无才报错。
+TARGET_INSTALLER="$TARGET_PKG/tools/macos/install.sh"
+if [ ! -f "$TARGET_INSTALLER" ]; then
+  TARGET_INSTALLER="$TARGET_PKG/tools/install-macos.sh"
+fi
+[ -f "$TARGET_INSTALLER" ] || Fail '目标版本缺少安装器（tools/macos/install.sh 与旧布局 tools/install-macos.sh 都没有），无法回滚'
 Log "目标版本：v$TARGET_VER"
+Log "目标安装器：$TARGET_INSTALLER"
 
 PROFILES_ROOT=$(dsh_profiles_root)
 PROFILE_DIR="$PROFILES_ROOT/$PROFILE"
@@ -194,7 +204,7 @@ restore_profile() {
 }
 
 Log '运行旧版本安装器（把插件 link 回旧版本目录）…'
-if ! DSH_BOOT_SUITE_ROLLBACK=1 sh "$TARGET_PKG/tools/install-macos.sh" --profiles "$PROFILE"; then
+if ! DSH_BOOT_SUITE_ROLLBACK=1 sh "$TARGET_INSTALLER" --profiles "$PROFILE"; then
   restore_profile
   Fail '旧版本安装器执行失败，已恢复 profile 配置。请把回滚日志发给作者。'
 fi

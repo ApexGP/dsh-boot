@@ -18,13 +18,13 @@ import path from 'node:path'
 const USAGE = `dsh-boot-suite profile 配置工具
 
 用法：
-  node tools/lib/profile-json.mjs get --profile-dir <dir> --name <name>
-  node tools/lib/profile-json.mjs get-field --profile-dir <dir> --name <name> --field <dependency|installed|version|linkTarget|bundlesHas>
-  node tools/lib/profile-json.mjs add-dependency --profile-dir <dir> --name <name> --spec <spec>
-  node tools/lib/profile-json.mjs ensure-bundle --profile-dir <dir> --name <name>
-  node tools/lib/profile-json.mjs remove-plugin --profile-dir <dir> --name <name>
-  node tools/lib/profile-json.mjs verify-installed --profile-dir <dir> --name <name> --spec <spec> --version <v>
-  node tools/lib/profile-json.mjs show --profile-dir <dir>
+  node tools/macos/lib/profile-json.mjs get --profile-dir <dir> --name <name>
+  node tools/macos/lib/profile-json.mjs get-field --profile-dir <dir> --name <name> --field <dependency|installed|version|linkTarget|bundlesHas>
+  node tools/macos/lib/profile-json.mjs add-dependency --profile-dir <dir> --name <name> --spec <spec>
+  node tools/macos/lib/profile-json.mjs ensure-bundle --profile-dir <dir> --name <name>
+  node tools/macos/lib/profile-json.mjs remove-plugin --profile-dir <dir> --name <name>
+  node tools/macos/lib/profile-json.mjs verify-installed --profile-dir <dir> --name <name> --spec <spec> --version <v>
+  node tools/macos/lib/profile-json.mjs show --profile-dir <dir>
 
 参数：
   --profile-dir  profile 目录（里面有 package.json），例如 ~/.dsh/profiles/desktop

@@ -10,7 +10,8 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+# 本脚本在 tools\dev\ 下：上两级才是仓库根
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
 $out = Join-Path $RepoRoot ('backups\known-good-' + $stamp)
 New-Item -ItemType Directory -Force -Path (Join-Path $out 'src') | Out-Null
@@ -36,7 +37,7 @@ foreach ($f in @('dsh-startup.json', 'chat-wallpaper.json')) {
 Set-Content -Path (Join-Path $out 'README.txt') -Value @(
   '已知可用快照 ' + $stamp,
   '',
-  '回滚：tools\rollback.cmd（默认取 backups 下最新的 known-good-*）'
+  '回滚：powershell -NoProfile -ExecutionPolicy Bypass -File tools\dev\rollback.ps1（默认取 backups 下最新的 known-good-*）'
 ) -Encoding UTF8
 
 Write-Host ('备份完成 → ' + $out)

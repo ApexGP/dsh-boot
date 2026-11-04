@@ -5,21 +5,21 @@
  * 事故复盘：
  *   v2.15.13 曾把 zip 直接解压到 ~/.dsh/boot-suite-updates/2.15.13/，
  *   文件铺在 2.15.13/ 下而不是 2.15.13/pkg/ 下；桌面助手固定调用
- *   ...\2.15.13\pkg\tools\install.ps1，于是报「路径不存在」。
+ *   ...\2.15.13\pkg\tools\windows\install.ps1，于是报「路径不存在」。
  *   更糟的是当时在 DSH 运行时删掉了旧 pkg，profile 的 link: 指向了
  *   不存在的目录，DSH 直接打不开，只能回滚。
  *
  * 本脚本的顺序（任何一步失败都保留旧版本，绝不让 profile 悬空）：
  *   1. 确认目标 pkg 没有被任何 profile 以 link: 正在使用（在跑就拒绝）；
  *   2. 解压到 updates 目录内的临时目录，校验 pkg/package.json 版本、
- *      pkg/tools/install.ps1、文件数；
+ *      pkg/tools/windows/install.ps1、文件数；
  *   3. 旧 pkg 改名备份（不删除），新 pkg 原子 rename 到位；
  *   4. 再校验一遍新 pkg；失败则把旧 pkg 改回来；
  *   5. 复制 zip 到 <版本>/<版本>.zip，最后打印摘要。
  *
  * 用法：
- *   node tools/stage-local.mjs 2.15.13
- *   node tools/stage-local.mjs 2.15.13 --zip "F:/.../03-发布包/dsh-boot-suite-win.zip"
+ *   node tools/dev/stage-local.mjs 2.15.13
+ *   node tools/dev/stage-local.mjs 2.15.13 --zip "F:/.../03-发布包/dsh-boot-suite-win.zip"
  */
 import fs from 'node:fs'
 import os from 'node:os'
@@ -28,13 +28,14 @@ import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.dirname(here)
+/* 本脚本在 tools/dev/ 下：上两级才是仓库根（URL 深度变了必须跟着改） */
+const repoRoot = path.dirname(path.dirname(here))
 
 const args = process.argv.slice(2)
 const version = args[0]
 const versionRe = /^\d+\.\d+\.\d+$/
 if (!version || !versionRe.test(version)) {
-  console.error('[x] 用法：node tools/stage-local.mjs <版本号> [--zip <发布包 zip 路径>]')
+  console.error('[x] 用法：node tools/dev/stage-local.mjs <版本号> [--zip <发布包 zip 路径>]')
   process.exit(1)
 }
 
@@ -107,9 +108,9 @@ const countFiles = (dir) => {
   return n
 }
 const pkgJsonPath = path.join(srcPkg, 'package.json')
-const installPath = path.join(srcPkg, 'tools', 'install.ps1')
+const installPath = path.join(srcPkg, 'tools', 'windows', 'install.ps1')
 if (!fs.existsSync(pkgJsonPath)) fail('解压结果里没有 package.json')
-if (!fs.existsSync(installPath)) fail('解压结果里没有 tools/install.ps1（桌面助手会找不到安装器）')
+if (!fs.existsSync(installPath)) fail('解压结果里没有 tools/windows/install.ps1（桌面助手会找不到安装器）')
 const pkgVersion = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')).version
 if (pkgVersion !== version) fail(`包内版本 ${pkgVersion} 与要暂存的 ${version} 不一致`)
 const fileCount = countFiles(srcPkg)
@@ -137,7 +138,7 @@ try {
 let ok = false
 try {
   const v = JSON.parse(fs.readFileSync(path.join(targetPkg, 'package.json'), 'utf8')).version
-  ok = v === version && fs.existsSync(path.join(targetPkg, 'tools', 'install.ps1'))
+  ok = v === version && fs.existsSync(path.join(targetPkg, 'tools', 'windows', 'install.ps1'))
 } catch { ok = false }
 if (!ok) {
   fs.rmSync(targetPkg, { recursive: true, force: true })

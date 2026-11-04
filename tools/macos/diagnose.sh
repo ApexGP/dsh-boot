@@ -7,10 +7,9 @@
 # ============================================================================
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+# 公共函数库固定在同目录的 lib/（仓库整理后不再有 tools/lib/）
 if [ -f "$SCRIPT_DIR/lib/mac-common.sh" ]; then
   . "$SCRIPT_DIR/lib/mac-common.sh"
-elif [ -f "$SCRIPT_DIR/../lib/mac-common.sh" ]; then
-  . "$SCRIPT_DIR/../lib/mac-common.sh"
 else
   printf '[x] 缺少公共函数库：%s\n' "$SCRIPT_DIR/lib/mac-common.sh" >&2
   exit 1
@@ -22,7 +21,8 @@ Say() { printf '%s\n' "$*"; }
 read_version() {
   sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -n 1
 }
-REPO_ROOT=$(dirname "$SCRIPT_DIR")
+# 仓库根：从 tools/macos/ 上两级
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd -P)
 VER=$(read_version "$REPO_ROOT/package.json")
 if [ -n "$VER" ]; then Say "dsh-boot-suite v$VER"; fi
 Say "脚本位置：$SCRIPT_DIR"
@@ -32,7 +32,8 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 dsh-boot-suite —— macOS 一键诊断
 
 用法：
-  sh tools/doctor.sh
+  sh tools/macos/diagnose.sh
+  （也可以双击仓库根目录的 setup.command，选 3）
 
 会在桌面生成 dsh诊断-<时间>.txt，把这个文件发给作者即可。
 EOF

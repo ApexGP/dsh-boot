@@ -37,17 +37,26 @@ function validatePackageJson(file, label) {
 }
 const REQUIRED_FILES = [
   'lib/index.js', 'lib/splash.js', 'lib/client.js', 'lib/assets/default-background.jpg', 'templates',
-  '安装.cmd', 'tools/install.ps1', 'tools/update-apply.ps1',
+  /* 根目录只留四个入口脚本：setup.cmd / setup.command / install-online.ps1 / install-online.sh */
+  'setup.cmd', 'setup.command', 'install-online.ps1', 'install-online.sh',
+  /* 兼容垫片（下版删除）：旧版（≤2.16.10）自动更新器解压新 zip 后会硬性检查并运行
+     tools/install.ps1，目录重排后必须保留这个只做转发的垫片，否则老用户升级直接断链。 */
+  'tools/install.ps1',
+  /* Windows：菜单 + 安装 / 更新 / 回滚 / 卸载 / 诊断，全在 tools/windows/ 下 */
+  'tools/windows/setup.ps1', 'tools/windows/install.ps1', 'tools/windows/update-apply.ps1',
+  'tools/windows/rollback-version.ps1', 'tools/windows/uninstall.ps1', 'tools/windows/diagnose.ps1',
   /* v2.16.11：同一个 zip 同时服务 Windows 与 macOS（文件名仍叫 dsh-boot-suite-win.zip），
-     mac 侧的安装器、更新器、公共库和双击入口必须一起打进去，否则 mac 用户解压后无从下手。 */
-  'tools/install-macos.sh', 'tools/update-apply.sh', 'tools/lib/mac-common.sh',
-  'tools/lib/profile-json.mjs', '安装-mac.command', 'install-online.sh',
+     mac 侧的菜单、安装器、更新器、公共库必须一起打进去，否则 mac 用户解压后无从下手。 */
+  'tools/macos/setup.sh', 'tools/macos/install.sh', 'tools/macos/update-apply.sh',
+  'tools/macos/rollback-version.sh', 'tools/macos/uninstall.sh', 'tools/macos/diagnose.sh',
+  'tools/macos/lib/mac-common.sh', 'tools/macos/lib/profile-json.mjs',
 ];
 
-/* macOS 自带的 Info-ZIP 3.0 会把中文名按 UTF-8 字节写进 zip，却不设「语言编码」标志位
-   （general purpose bit 11）。Windows 资源管理器 / Expand-Archive 只认标志位，解压后
-   中文名会变乱码（安装.cmd、安装-mac.command 变成乱码就双击不到了）。打完包后统一补标志位：
-   中央目录头偏移 8、本地文件头偏移 6，两处都要改。Windows 分支不经过这里，行为不变。 */
+/* macOS 自带的 Info-ZIP 3.0 会把非 ASCII 文件名按 UTF-8 字节写进 zip，却不设「语言编码」
+   标志位（general purpose bit 11）。Windows 资源管理器 / Expand-Archive 只认标志位，解压后
+   非 ASCII 名（中文文档、以后可能加的素材）会变乱码。脚本文件名现在一律 ASCII，但补标志位
+   的逻辑照旧保留当安全网。打完包后统一补：中央目录头偏移 8、本地文件头偏移 6，两处都要改。
+   Windows 分支不经过这里，行为不变。 */
 function markZipUtf8(file) {
   const buf = fs.readFileSync(file);
   let eocd = -1;
@@ -97,9 +106,8 @@ function verifyZip(verifyDir) {
   execFileSync('unzip', ['-l', out], { stdio: 'inherit' });
   const names = execFileSync('unzip', ['-Z1', out], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);
   if (names.length < 50) throw new Error('zip 内容异常（只有 ' + names.length + ' 个文件）');
-  /* macOS 自带的 unzip 在列目录时会把 UTF-8 中文名显示成 ?（解压本身是正确的），
-     所以这里只对 ASCII 名做字符串断言；中文文件（安装.cmd / 安装-mac.command）
-     交给下面「解压后按真实文件系统再查一遍」的通用逻辑。 */
+  /* macOS 自带的 unzip 在列目录时会把 UTF-8 非 ASCII 名显示成 ?（解压本身是正确的），
+     所以文件名断言交给下面「解压后按真实文件系统再查一遍」的通用逻辑。 */
   const missing = REQUIRED_FILES.filter((f) => /^[\x00-\x7F]+$/.test(f))
     .filter((f) => !names.includes(f) && !names.some((n) => n.startsWith(f + '/')));
   if (missing.length) throw new Error('zip 内缺少必需文件：' + missing.join('、'));
@@ -121,7 +129,7 @@ const verify = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-verify-'));
 verifyZip(verify);
 const vpkg = validatePackageJson(path.join(verify, 'package.json'), 'zip 内');
 if (vpkg.version !== pkg.version) throw new Error('zip 内版本 ' + vpkg.version + ' 与源目录 ' + pkg.version + ' 不一致');
-/* 解压出来再逐个查一遍（含中文文件名），能抓到打包/解压链路把文件名弄坏的情况。
+/* 解压出来再逐个查一遍，能抓到打包/解压链路把文件名弄坏的情况。
    Windows 分支保持历史行为：只校验 package.json 版本 —— Expand-Archive 解压非 ASCII
    文件名时的编码随系统区域设置而变，额外断言可能把一直可用的 Windows 发版流程卡死。 */
 if (process.platform !== 'win32') {

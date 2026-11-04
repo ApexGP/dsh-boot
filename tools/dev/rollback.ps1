@@ -2,12 +2,12 @@
 <#
   dsh-boot-suite —— 回滚到某个备份
 
-  备份由 tools\make-backup.ps1 生成，放在仓库的 backups\known-good-<时间戳>\ 下。
+  备份由 tools\dev\make-backup.ps1 生成，放在仓库的 backups\known-good-<时间戳>\ 下。
 
   用法：
     1) 完全退出桌面端
-    2) 运行 tools\rollback.cmd（默认取最新备份）
-       或 powershell -File tools\rollback.ps1 -Backup "backups\known-good-2026-10-18_170000"
+    2) powershell -NoProfile -ExecutionPolicy Bypass -File tools\dev\rollback.ps1（默认取最新备份）
+       或加 -Backup "backups\known-good-2026-10-18_170000" 指定备份
     3) 重新打开桌面端
 #>
 [CmdletBinding()]
@@ -17,7 +17,8 @@ $ErrorActionPreference = 'Stop'
 function Say($m) { Write-Host $m }
 function Die($m) { Write-Host ('[x] ' + $m) -ForegroundColor Red; exit 1 }
 
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+# 本脚本在 tools\dev\ 下：上两级才是仓库根
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ProfilesRoot = Join-Path $env:USERPROFILE '.dsh\profiles'
 $ProfileDir = Join-Path $ProfilesRoot $Profile
 

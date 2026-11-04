@@ -23,8 +23,8 @@ dsh plugin --profile desktop add ./dsh-startup-screen-1.1.1.tgz
 # 3) 重新打开桌面端
 ```
 
-Windows 上也可以双击 `安装.cmd`：它会自动识别 `web` / `desktop` 两个 profile
-并逐个安装。
+Windows 上也可以双击 `setup.cmd` → 菜单选「安装 / 更新」：它会自动识别 `web` / `desktop`
+两个 profile 并逐个安装（脚本本体 `tools/windows/install.ps1`）。
 
 **为什么必须先退出桌面端**：desktop profile 的 `package.json` 由桌面端进程加锁
 管理（`desktop-plugins.lock.json` 里记着谁装了谁）。进程在跑的时候写进去会被覆盖，
@@ -98,7 +98,7 @@ then fully quit it before running dsh plugin --profile desktop.
 
 | 验证项 | 状态 |
 |---|---|
-| 冒烟测试（`npm test`，当前 11 套） | ✅ 通过 |
+| 冒烟测试（`npm test`，当前 14 套） | ✅ 通过 |
 | 真实 `dist/index.html` 上的注入产物 | ✅ 通过（隔离环境实测） |
 | 隔离 DSH 实例的真实 HTTP 全链路（index 注入 / 三条路由 / 7 段音频素材 / 配置读写 / 401 信任栅栏） | ✅ 通过 |
 | 没有 `webServer` 的降级路径不抛异常 | ✅ 通过 |
@@ -156,9 +156,9 @@ Windows 用 PowerShell，macOS 用 POSIX sh + `.command` 双击入口。
 | 用户数据目录 | `%USERPROFILE%\.dsh` | `~/.dsh` |
 | 桌面端位置 | `%LOCALAPPDATA%\Programs\DeepSeek Harness` | `/Applications/DeepSeek Harness.app` |
 | 自带 CLI | `resources\runtime\cli\bin\dsh.cmd` | `DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh` |
-| 双击安装 | `安装.cmd` | `安装-mac.command` |
-| 卸载 / 诊断 / 预览 | `卸载.cmd` / `诊断.cmd` / `打开预览.cmd` | `卸载-mac.command` / `诊断-mac.command` / `打开预览.command` |
-| 自动更新 | 宿主起 PowerShell 跑 `tools/update-apply.ps1` | 宿主打开 Terminal 跑 `tools/update-apply.sh` |
+| 双击入口 | `setup.cmd`（菜单） | `setup.command`（菜单） |
+| 安装 / 卸载 / 诊断 / 预览 | 菜单 1 / 2 / 3 / 4，脚本在 `tools/windows/` | 菜单 1 / 2 / 3 / 4，脚本在 `tools/macos/` |
+| 自动更新 | 宿主起 PowerShell 跑 `tools/windows/update-apply.ps1` | 宿主打开 Terminal 跑 `tools/macos/update-apply.sh` |
 | 更新前回滚按钮 | 桌面「紧急回滚-V<版本>…cmd」 | 桌面「紧急回滚-V<版本>…command」 |
 
 macOS 注意事项：

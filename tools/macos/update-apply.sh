@@ -1,6 +1,6 @@
 #!/bin/sh
 # ============================================================================
-# dsh-boot-suite —— macOS 自动更新执行器（对齐 Windows 的 tools/update-apply.ps1）
+# dsh-boot-suite —— macOS 自动更新执行器（对齐 Windows 的 tools/windows/update-apply.ps1）
 #
 # 为什么需要这个脚本：插件运行时跑在 DSH 进程里，自己不能替换自己。Windows 版是
 # 宿主启动一个 PowerShell 窗口等用户退出后再换版本；macOS 没有 .ps1，宿主（
@@ -8,11 +8,11 @@
 # 执行的就是本脚本。
 #
 # 宿主调用约定（--zip/--version/--exe/--config 由 host-startup.js 传）：
-#   sh tools/update-apply.sh --zip <安装包绝对路径> --version <目标版本> \
+#   sh tools/macos/update-apply.sh --zip <安装包绝对路径> --version <目标版本> \
 #      --exe <桌面端可执行路径> --config <用户配置文件路径>
 #
 # 流程：等用户完全退出 DSH → 校验 zip → 备份配置 → 解压到 pkg.new → 校验版本
-#       → 旧 pkg 移 pkg.old、pkg.new 就位 → 跑 pkg 里的 install-macos.sh
+#       → 旧 pkg 移 pkg.old、pkg.new 就位 → 跑 pkg 里的 tools/macos/install.sh
 #       → 成功删除 pkg.old 并重开 DSH；失败恢复 pkg.old 和配置后重开 DSH。
 # 任何情况下都不删用户配置和模板（只动 $DSH_HOME/boot-suite-updates/<版本>/ 里
 # 我们自己的 pkg / pkg.new / pkg.old）。
@@ -31,13 +31,13 @@ if [ ! -f "$UA_LIB" ]; then
   printf '    安装包不完整，或脚本被单独拷了出来。请重新下载完整发布包。\n' >&2
   exit 1
 fi
-# shellcheck source=tools/lib/mac-common.sh
+# shellcheck source=tools/macos/lib/mac-common.sh
 . "$UA_LIB"
 
 UA_USAGE() {
   cat <<'EOF'
 用法：
-  sh tools/update-apply.sh --zip <安装包绝对路径> --version <目标版本> \
+  sh tools/macos/update-apply.sh --zip <安装包绝对路径> --version <目标版本> \
      [--exe <桌面端可执行路径>] [--config <用户配置文件路径>]
 
 参数：
@@ -286,7 +286,7 @@ UA_LOG "目标版本：v$UA_VERSION"
 UA_LOG "安装包：$UA_ZIP"
 UA_LOG "工作目录：$UA_WORK"
 if [ -n "$UA_LOG_HINT" ]; then UA_LOG "更新日志：$UA_LOG_HINT"; fi
-UA_OLD_VER=$(UA_READ_VERSION "$UA_HERE/../package.json" 2>/dev/null || true)
+UA_OLD_VER=$(UA_READ_VERSION "$UA_HERE/../../package.json" 2>/dev/null || true)
 if [ -n "${UA_OLD_VER:-}" ]; then
   UA_LOG "当前版本：v$UA_OLD_VER → 目标版本：v$UA_VERSION"
 fi
@@ -337,7 +337,8 @@ if ! unzip -Z1 "$UA_ZIP" > "$UA_LIST" 2>/dev/null; then
   UA_FAIL '读取安装包文件列表失败，安装包可能已损坏'
 fi
 # 兼容以 ./ 开头的条目（部分打包工具会加）；去掉 CR，供精确匹配用。
-# 必须 LC_ALL=C：macOS 自带 unzip -Z1 列中文名（安装.cmd 等）时会输出非法 UTF-8 字节，
+# 必须 LC_ALL=C：unzip -Z1 列到中文名时会输出非法 UTF-8 字节。打包入口已换成 ASCII
+# 的 setup.cmd / setup.command，但仓库 docs/ 下的中文文件名仍会随发布包一起打包，
 # BSD tr/sed 在 UTF-8 locale（本机 LANG=C.UTF-8）下遇到非法字节会直接报
 # "Illegal byte sequence" 且 rc=1，$UA_LIST.norm 变空 → 误判「只有 0 个文件」。
 # 这里只是按行/按字节做归一化，用 C locale 完全够用（2026-11-05 发布阻断修复）。
@@ -349,7 +350,7 @@ if [ "$UA_COUNT" -lt 50 ]; then
   UA_FAIL "安装包内容异常（只有 $UA_COUNT 个文件），请确认下载的是完整发布包"
 fi
 UA_MISSING=''
-for UA_NEED in package.json tools/install-macos.sh lib/index.js lib/splash.js lib/client.js; do
+for UA_NEED in package.json tools/macos/install.sh lib/index.js lib/splash.js lib/client.js; do
   if ! LC_ALL=C grep -Fxq "$UA_NEED" "$UA_LIST.norm"; then
     UA_MISSING="$UA_MISSING $UA_NEED"
   fi
@@ -434,9 +435,9 @@ UA_LOG '新版本目录已就位。'
 # ── 10. 第 6 步：运行新版本安装器 ───────────────────────────────────────────
 UA_LOG ''
 UA_LOG '第 6 步：运行新版本安装器（可能需要几十秒，请勿关闭本窗口）'
-UA_INSTALLER="$UA_PKG/tools/install-macos.sh"
+UA_INSTALLER="$UA_PKG/tools/macos/install.sh"
 if [ ! -f "$UA_INSTALLER" ]; then
-  UA_FAIL '新版本里没有 tools/install-macos.sh，无法安装'
+  UA_FAIL '新版本里没有 tools/macos/install.sh，无法安装'
 fi
 # 非交互执行：stdin 接 /dev/null，避免安装器里的 read 卡死。DSH 已退出，
 # 不需要 --force，也不传 --check-only。

@@ -1,7 +1,11 @@
 #!/bin/sh
 # ============================================================================
-# dsh-boot-suite —— macOS 公共函数（被 install-macos.sh / update-apply.sh /
-# rollback-version.sh / emergency-uninstall.sh / doctor.sh source）
+# dsh-boot-suite —— macOS 公共函数（被同目录的 install.sh / update-apply.sh /
+# rollback-version.sh / uninstall.sh / diagnose.sh source）
+#
+# 位置约定：本文件在 tools/macos/lib/。安装器把 rollback-version.sh 复制到
+# $DSH_HOME/boot-suite-updates/ 时会一并复制 lib/mac-common.sh，保持同构目录，
+# 所以脚本里统一按「$SCRIPT_DIR/lib/mac-common.sh」定位，不做其它兜底。
 #
 # 目标：把「找 DSH 安装位置 / 找 CLI / 找 node / 判断进程在不在 / 等退出 /
 #       重新打开 / 找桌面目录」这些每个脚本都要做的事收敛到一处。

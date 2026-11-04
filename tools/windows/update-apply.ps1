@@ -47,7 +47,8 @@ function Test-UpdateZip($path, $expectVersion) {
     Fail ('安装包不是完整的 zip（可能下载中断或被截断）：' + $_.Exception.Message)
   }
   if ($names.Count -lt 50) { Fail ('安装包内容异常（只有 ' + $names.Count + ' 个文件）') }
-  foreach ($need in @('package.json', 'tools/install.ps1', 'lib/index.js', 'lib/splash.js', 'lib/client.js')) {
+  # 发布包内安装器位置：v2.16.11 目录重排后是 tools/windows/install.ps1（zip 条目用正斜杠）。
+  foreach ($need in @('package.json', 'tools/windows/install.ps1', 'lib/index.js', 'lib/splash.js', 'lib/client.js')) {
     if (-not ($names -contains $need)) { Fail ('安装包缺少必需文件：' + $need) }
   }
   Log ('zip 校验通过：' + $names.Count + ' 个文件')
@@ -114,8 +115,8 @@ try {
   Log '新版本目录已就位（旧目录已备份，安装成功后清理）'
 
   Log '运行安装器（可能需要几十秒）…'
-  $installer = Join-Path $pkg 'tools\install.ps1'
-  if (-not (Test-Path $installer)) { Fail '安装包里没有 tools/install.ps1' }
+  $installer = Join-Path $pkg 'tools\windows\install.ps1'
+  if (-not (Test-Path $installer)) { Fail '安装包里没有 tools/windows/install.ps1' }
   $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File', $installer) -Wait -PassThru -NoNewWindow
   if ($proc.ExitCode -ne 0) { Fail ('安装器退出码 ' + $proc.ExitCode) }
 

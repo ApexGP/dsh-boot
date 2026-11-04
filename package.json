@@ -28,13 +28,9 @@
     "tools",
     "test",
     "preview/index.html",
-    "open-preview.sh",
-    "打开预览.cmd",
-    "安装.cmd",
-    "安装-mac.command",
-    "卸载-mac.command",
-    "诊断-mac.command",
-    "打开预览.command",
+    "setup.cmd",
+    "setup.command",
+    "install-online.ps1",
     "install-online.sh",
     "cordis.patch.yml",
     "README.md",
@@ -46,9 +42,9 @@
   ],
   "scripts": {
     "test": "node test/smoke-host.mjs && node test/smoke-splash.mjs && node test/smoke-splash-tl.mjs && node test/smoke-client.mjs && node test/smoke-desktop-boot.mjs && node test/smoke-import.mjs && node test/smoke-wallpaper-host.mjs && node test/smoke-wallpaper-client.mjs && node test/smoke-wallpaper-apply.mjs && node test/smoke-wallpaper-panel.mjs && node test/smoke-merge.mjs && node test/smoke-coords.mjs && node test/smoke-package.mjs && node test/smoke-macos.mjs",
-    "motion:check": "node tools/motion-check.mjs --template=deep-sonar --speed=2",
+    "motion:check": "node tools/dev/motion-check.mjs --template=deep-sonar --speed=2",
     "ui:detect": "npx --yes impeccable@latest detect --no-config tools/editor.html preview/index.html",
-    "release": "node tools/build-release.mjs"
+    "release": "node tools/dev/build-release.mjs"
   },
   "license": "MIT",
   "engines": {

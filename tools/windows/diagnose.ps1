@@ -3,6 +3,8 @@
   dsh-boot-suite —— 一键诊断
   把环境信息写到桌面：dsh诊断-时间.txt
   用户把这个文件发给作者即可定位问题。
+  用法：双击仓库根目录的 setup.cmd → 菜单选 3；也可以直接跑：
+        powershell -NoProfile -ExecutionPolicy Bypass -File tools\windows\diagnose.ps1
 #>
 $ErrorActionPreference = 'Continue'
 $out = Join-Path ([Environment]::GetFolderPath('Desktop')) ('dsh诊断-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.txt')

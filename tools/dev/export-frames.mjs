@@ -3,7 +3,7 @@
  * 帧序列导出：把任意模板按 fps 逐帧渲染成 PNG（剪辑软件可当图片序列导入）。
  *
  * 用法：
- *   node tools/export-frames.mjs --template=550c-homage --fps=30 --out=05-素材/导出/550c
+ *   node tools/dev/export-frames.mjs --template=550c-homage --fps=30 --out=05-素材/导出/550c
  *   可选：--from=0 --to=16000（毫秒，默认整段）  --width=1280 --height=720
  *
  * 输出：<out>/frame_00001.png ... 以及 <out>/manifest.json（帧率/时长/尺寸）
@@ -25,7 +25,8 @@ if (!tplId) { console.error('缺 --template=<模板id>'); process.exit(2) }
 const fps = Math.max(1, Math.min(60, Number(args.fps) || 30))
 const W = Number(args.width) || 1280
 const H = Number(args.height) || 720
-const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
+/* 本脚本在 tools/dev/ 下：URL 上两级才是仓库根，模板与 lib 都从仓库根取 */
+const root = path.resolve(fileURLToPath(new URL('../../', import.meta.url)))
 const tplDir = path.join(root, 'templates', tplId)
 const outDir = path.resolve(args.out || path.join('05-素材', '导出', tplId))
 /* Chrome 可执行文件：--chrome= / CHROME_PATH 优先；否则按平台取默认安装位置。

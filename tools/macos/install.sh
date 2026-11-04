@@ -2,13 +2,13 @@
 # ============================================================================
 # dsh-boot-suite —— macOS 一键安装
 #
-# 用法（最省事：双击仓库根目录的「安装-mac.command」）：
-#   sh tools/install-macos.sh                       # 安装到 desktop / web 中已初始化的 profile
-#   sh tools/install-macos.sh --check-only          # 只看计划，不修改任何东西
-#   sh tools/install-macos.sh --force               # DSH 还在运行时也继续（装完手动重启）
-#   sh tools/install-macos.sh --profiles desktop,web
+# 用法（最省事：双击仓库根目录的 setup.command，再选 1）：
+#   sh tools/macos/install.sh                       # 安装到 desktop / web 中已初始化的 profile
+#   sh tools/macos/install.sh --check-only          # 只看计划，不修改任何东西
+#   sh tools/macos/install.sh --force               # DSH 还在运行时也继续（装完手动重启）
+#   sh tools/macos/install.sh --profiles desktop,web
 #
-# 它做什么（与 Windows 的 tools/install.ps1 行为对齐）：
+# 它做什么（与 Windows 的 tools/windows/install.ps1 行为对齐）：
 #   1. 找 DSH 命令行（dsh）与已初始化过的 profile（web / desktop）
 #   2. 桌面端在跑就先要求完全退出（--force 可热装）
 #   3. 换版本安装前，在桌面留一个「紧急回滚」按钮（出了事双击就能退回去）
@@ -21,9 +21,10 @@
 # ============================================================================
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
-REPO_ROOT=$(dirname "$SCRIPT_DIR")
+# 本脚本在 tools/macos/ 下，仓库根在上两级（仓库整理前在 tools/ 下，只上一级）
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd -P)
 
-# 公共函数库：repo 里是 tools/lib/，被复制到 $DSH_HOME/boot-suite-updates/ 后是 lib/
+# 公共函数库：与本脚本同目录的 lib/（rollback-version.sh 被复制到更新目录时结构同构）
 if [ -f "$SCRIPT_DIR/lib/mac-common.sh" ]; then
   . "$SCRIPT_DIR/lib/mac-common.sh"
 else
@@ -40,7 +41,8 @@ usage() {
 dsh-boot-suite —— macOS 一键安装
 
 用法：
-  sh tools/install-macos.sh [选项]
+  sh tools/macos/install.sh [选项]
+  （也可以双击仓库根目录的 setup.command，选 1）
 
 选项：
   --check-only            只打印计划，绝不修改任何文件；DSH 在运行时也不会失败
@@ -56,15 +58,15 @@ dsh-boot-suite —— macOS 一键安装
 说明：
   · 安装方式是 link（把插件链接到仓库目录），改代码立即生效，不复制文件
   · 装完不会自动启动 DSH，请手动打开
-  · 出问题先完全退出 DSH，再双击仓库根目录的「卸载-mac.command」
+  · 出问题先完全退出 DSH，再双击仓库根目录的 setup.command（选 2 卸载）
 EOF
 }
 
 # ── 0. 基本检查 ────────────────────────────────────────────────────────────
 [ -f "$REPO_ROOT/package.json" ] || Die "这不像插件目录：$REPO_ROOT"
 [ -f "$REPO_ROOT/lib/index.js" ] || Die '源码不完整（缺 lib/index.js），你下载的可能是残缺的压缩包'
-[ -f "$REPO_ROOT/tools/lib/mac-common.sh" ] || Die "源码不完整（缺 tools/lib/mac-common.sh）：$REPO_ROOT"
-[ -f "$PROFILE_JSON_TOOL" ] || Die "源码不完整（缺 tools/lib/profile-json.mjs）：$REPO_ROOT"
+[ -f "$SCRIPT_DIR/lib/mac-common.sh" ] || Die "源码不完整（缺 tools/macos/lib/mac-common.sh）：$REPO_ROOT"
+[ -f "$PROFILE_JSON_TOOL" ] || Die "源码不完整（缺 tools/macos/lib/profile-json.mjs）：$REPO_ROOT"
 
 # 直接按 package.json 的机器格式取版本，避免依赖 node（--check-only 要尽量「什么都不启动」）
 read_version() {
@@ -282,7 +284,7 @@ prepare_checkpoint() {
   UPDATES_ROOT="$(dsh_home)/boot-suite-updates"
   ROLLBACK_SRC="$SCRIPT_DIR/rollback-version.sh"
   if [ ! -f "$ROLLBACK_SRC" ]; then
-    Say '[!] 找不到 tools/rollback-version.sh，跳过回滚保护。'
+    Say '[!] 找不到 tools/macos/rollback-version.sh，跳过回滚保护。'
     return 0
   fi
   if ! mkdir -p "$UPDATES_ROOT/lib"; then
@@ -505,7 +507,7 @@ done
 
 Say ''
 if [ "$CHECK_ONLY" = 1 ]; then
-  Say '检查完毕 —— 没有修改任何东西。确认无误后双击「安装-mac.command」正式安装。'
+  Say '检查完毕 —— 没有修改任何东西。确认无误后双击仓库根目录的 setup.command（选 1）正式安装。'
   exit 0
 fi
 
@@ -528,5 +530,5 @@ Say '  2) 冷启动会播放开机动画'
 Say '  3) 动画结束后落在聊天底图上（大字横幅可选）'
 Say ''
 Say '出问题（黑屏/点不动）：先完全退出 DeepSeek Harness（窗口 + 菜单栏图标），'
-Say '再双击仓库根目录的「卸载-mac.command」；还不行就用「诊断-mac.command」生成报告发给作者。'
+Say '再双击仓库根目录的 setup.command（选 2 卸载）；还不行就选 3 生成诊断报告发给作者。'
 exit 0

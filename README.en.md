@@ -1,8 +1,11 @@
 # dsh-boot-suite
 
-> **A boot suite for DeepSeek Harness** — a six-act cold-start animation plus a chat wallpaper.
-> One plugin, two independent halves: the ritual of startup, and the backdrop you live on afterwards.
+[简体中文](README.md) | [English](README.en.md)
 
+> **A boot suite for DeepSeek Harness** — a cold-start animation, plus the wallpaper you live on once the chat opens.
+> One plugin, two independent halves: a broken animation never breaks the wallpaper, and vice versa — the UI always comes up.
+
+[![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](#install)
 [![release](https://img.shields.io/github/v/release/LeeRolling/dsh-boot-suite?label=release)](https://github.com/LeeRolling/dsh-boot-suite/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -10,87 +13,90 @@
 
 ![demo](docs/demo.gif)
 
-> The GIF is recorded frame-by-frame from `preview/demo.html`. The real thing has real voice lines and UI sound effects.
+> The GIF is a silent 5-second loop recorded from `preview/demo.html`; the real thing plays voice lines and UI sound effects.
 
 ---
 
-## What it is
-
-On cold start, DSH plays a six-act sequence, then hands over to the chat with your own wallpaper behind it:
-
-    black screen / DeepSeek mark → overexposed wash → warm "technical dossier" plate
-      → five-step interactive authorization → glitch reveal → chat wallpaper
-
-**This is not a video file — it is a code animation.** `lib/splash.js` (3288 lines) + `lib/splash.css` (1410 lines), about 196 KB of source.
-Everything is drawn live with DOM, CSS animation and WebAudio — no image sequences or video assets.
+## Features
 
 | | Boot animation | Chat wallpaper |
 |---|---|---|
 | Entry | Settings → "启动动画" | Settings → "聊天背景" |
-| Content | six acts, typewriter subtitles, targeting ring, chromatic glitch | default built-in background, static image, loop video, big text banner |
-| Media | 5 real-voice lines + welcome line + 2 UI sfx (mp3) | built-in default background + your own images/videos |
-| Tunable | 33 options: identity, id, access level, colors, speed, voice, copy | default/custom background, loop video, veil opacity, banner text |
+| Content | act-by-act animation, typewriter subtitles, targeting ring, glitch reveal | built-in default background (ready out of the box), static image, loop video, big text banner |
+| Tunable | templates, transitions, voice lines and effects, background music, custom video/image | background, veil opacity, lens blur, banner text, color mode |
 
-The chat wallpaper **ships with a default background** (v2.13.1, the whale-girl still from act 2), so a fresh install
-already has a wallpaper; Settings → "聊天背景" → "背景图" can switch back to it at any time, or turn the image off.
-Chat text auto-adapts to the actual wallpaper+veil brightness, and since v2.13.10 the native Windows caption buttons
-(minimize / maximize / close) keep a fixed high-contrast pair in both light and dark appearance.
-Each half is **independent**: a broken animation never breaks the wallpaper and vice versa; the UI always comes up.
+- **Not a video — a code animation**: painted live with DOM + CSS + WebAudio; no video assets required.
+- **Templates & editor**: acts are pure data (any number from 1 to 24); import mp4 / webm / gif / images; Settings → "启动动画" → "打开模板编辑器" opens the timeline editor and the "🏪 商店" template store (source: [dsh-boot-suite-templates](https://github.com/LeeRolling/dsh-boot-suite-templates)). Templates are read as data only — their code is never executed.
+- **No blank frame, no black screen**: the first frame is painted during document parsing, so DSH's own "HARNESS / Loading plugins…" card is suppressed; missing fields or invalid ids always fall back to the bundled template.
 
 ## Install
 
-    # Quit DeepSeek Harness Desktop completely first
-    dsh plugin --profile desktop add link:<path-to-this-repo>
+**Fully quit DeepSeek Harness first (window + menu-bar/tray icon), then install and reopen it.** The release `dsh-boot-suite-win.zip` is the cross-platform package shared by Windows and macOS (the `win` in the file name is kept for history).
 
-Requires Node ≥ 20. The desktop app must be fully quit — the profile's `package.json` is locked while it runs.
+### macOS
 
-### macOS (v2.16.11+)
+1. **Double-click (recommended)**: unzip `dsh-boot-suite-win.zip`, double-click `setup.command` in the repo root and choose "安装 / 更新" (install / update). If Gatekeeper blocks it: right-click → Open.
+2. **One-line online install**:
 
-The plugin itself is identical on macOS; install / uninstall / update are POSIX sh scripts with double-click entries (no PowerShell needed).
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+   ```
 
-- **A (recommended)**: download the release **`dsh-boot-suite-win.zip`** (the name says win, but it is the cross-platform package) → unzip → fully quit DeepSeek Harness (window + menu-bar icon) → double-click **`安装-mac.command`**. If Gatekeeper refuses to open it the first time: right-click → Open.
-- **B (one line, online install)**:
+3. **npm**: desktop — Settings → Plugins → Add plugin, enter `dsh-boot-suite`; plain dsh web — `dsh plugin add dsh-boot-suite`.
+4. **CLI**: `dsh plugin --profile desktop add link:<repo path>`. If `dsh` is not on PATH, the bundled one is at `/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`.
 
-  ~~~sh
-  curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
-  ~~~
+### Windows
 
-- **C (CLI)**: `dsh plugin --profile desktop add link:<path-to-this-repo>`. The bundled `dsh` lives at `/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`.
+1. **Double-click (recommended)**: unzip `dsh-boot-suite-win.zip`, double-click `setup.cmd` in the repo root and choose "安装 / 更新" (install / update).
+2. **One-line online install** (PowerShell):
 
-Maintenance entries on macOS (repo root): `卸载-mac.command` (uninstall), `诊断-mac.command` (desktop diagnostic report), `打开预览.command` (offline preview).
-Auto-update works the same way: "立即更新" opens Terminal and runs `tools/update-apply.sh` after DeepSeek Harness quits, then relaunches it. Before each update a desktop rollback button `紧急回滚-V<old>…command` is created — with the app fully quit, double-click it to switch back to the previous plugin version (settings untouched).
+   ```powershell
+   irm https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.ps1 | iex
+   ```
 
-## Safety kit
+3. **npm**: desktop — Settings → Plugins → Add plugin, enter `dsh-boot-suite`; plain dsh web — `dsh plugin add dsh-boot-suite`.
+4. **CLI**: `dsh plugin --profile desktop add link:<repo path>`.
 
-This plugin injects into the **first paint**, so a bug can mean a full black screen where even "skip" is unreachable.
-The repo ships three maintenance scripts that work **without a usable UI**:
+> The npm package may lag behind the latest release; for the newest features (including macOS support) use the release zip or the online installer.
 
-| Tool | Purpose |
+## Maintenance
+
+| Entry | What it does |
 |---|---|
-| `tools/emergency-uninstall.cmd` | remove the plugin entirely, restore the plain client |
-| `tools/rollback.cmd` | roll back to the newest snapshot under `backups/` |
-| `tools/make-backup.ps1` | snapshot the current state (run before editing code) |
+| `setup.command` / `setup.cmd` | Double-click menu: install / update, uninstall, diagnose, preview |
+| Settings | "启动动画" and "聊天背景" panels — no manual file editing needed |
+| Desktop rollback button | Before every install/update, an "紧急回滚-V<old version>（先完全退出 DSH 再双击）" button is created; if the new version fails to open, fully quit DSH and double-click it. Plugin version only — your settings stay untouched. |
+| Diagnostic report | Menu → "Diagnose" writes `dsh诊断-<timestamp>.txt` to the desktop |
+| Config files | `~/.dsh/dsh-startup.json`, `~/.dsh/chat-wallpaper.json` |
+| User templates | `~/.dsh/startup-templates/<id>/template.json`; the same id overrides the bundled template |
 
-### Update protection: automatic emergency rollback (v2.13.3)
+To preview the install plan without touching anything: macOS `sh tools/macos/install.sh --check-only`; Windows `powershell -NoProfile -ExecutionPolicy Bypass -File tools\windows\install.ps1 -CheckOnly`.
 
-Before every install/update, the installer drops a **desktop rollback button** for the currently working version
-(`紧急回滚-V<current版>（先完全退出 DSH 再双击）.cmd`). If the new version fails to install or the app no longer opens,
-fully quit DeepSeek Harness (window + tray) and double-click it: the plugin switches back to the previous working version,
-keeping your settings untouched. After a successful update the old button is replaced automatically on the next update —
-you do not need to delete it. Every rollback writes a `dsh-boot-suite 回滚日志` log on the desktop.
+## Rescue
 
-Kill every `DeepSeek Harness` process, run the script, relaunch. Diagnostics land in `~/.dsh/boot-suite-diag.log`.
-On macOS use `卸载-mac.command` / `诊断-mac.command` / `打开预览.command` instead (quit DeepSeek Harness first: window + menu-bar icon).
+The plugin injects into the **first paint**, so a bug can mean a full black screen where even "skip" is unreachable. Recovery order:
 
-## Tests
+1. Fully quit DeepSeek Harness (window + menu-bar/tray; make sure no process is left).
+2. Double-click `setup.command` (macOS) or `setup.cmd` (Windows) in the repo root.
+3. Choose "Uninstall"; once the UI is back, relaunch DSH.
 
-    npm test
+To roll back instead of uninstalling: quit DSH, then double-click the desktop "紧急回滚-V<old version>" button (a `.cmd` on Windows, a `.command` on macOS). Reports land on the desktop as `dsh诊断-<timestamp>.txt`; runtime logs are at `~/.dsh/boot-suite-diag.log`.
+The scripts also run standalone: macOS `tools/macos/uninstall.sh` / `tools/macos/diagnose.sh` / `tools/macos/rollback-version.sh`; Windows `tools/windows/uninstall.ps1` / `tools/windows/diagnose.ps1` / `tools/windows/rollback-version.ps1`.
 
-14 self-contained smoke suites (including a macOS-specific one), ~1000 assertions, no runtime dependencies.
+## Development & testing
 
-## License
+```sh
+npm test    # 14 dependency-free smoke suites (incl. a macOS one), ~1000 assertions
+```
 
-MIT for the original code and copy. Visual style references an anime; audio assets come from a third-party video
-and remain with their rights holders. **No commercial use is granted.**
+- Requirements: Node ≥ 20.
+- Release build: `node tools/dev/build-release.mjs` (cross-platform zip; set `DSH_RELEASE_OUT` for the output dir)
+- Motion regression: `node tools/dev/motion-check.mjs`; frame export for recordings: `node tools/dev/export-frames.mjs`
+- Layout: `lib/` (host + browser halves), `templates/` (bundled templates), `preview/` (offline preview), `test/` (smoke suites), `tools/` (`tools/windows/` and `tools/macos/` maintenance scripts, `tools/dev/` developer tools)
+- Docs: [template format](docs/模板格式.md) · [engine capabilities](docs/引擎能力清单.md) · [install & troubleshooting](INSTALL.md) · [changelog](CHANGELOG.md)
 
-Original author: 沈宏宏 · Merged, fixed and maintained by LeeRolling
+## License & credits
+
+MIT for the original code and copy. Visual style references an anime; audio assets remain with their rights holders. **No commercial use is granted.**
+
+Original author: **沈宏宏**; merged, fixed and maintained by LeeRolling. Reference works and third-party assets: [CREDITS.md](CREDITS.md).

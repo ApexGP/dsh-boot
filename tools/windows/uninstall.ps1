@@ -5,7 +5,8 @@
     · dsh-boot-suite 依赖与 node_modules 链接
     · bundles 列表里的 dsh-boot-suite / dsh-startup-screen / dsh-chat-wallpaper
     · 残留的旧插件链接
-  用法：先完全退出桌面端（托盘也退），再双击「卸载.cmd」。
+  用法：先完全退出桌面端（托盘也退），再双击仓库根目录的 setup.cmd → 菜单选 2（卸载）。
+        也可以直接跑：powershell -NoProfile -ExecutionPolicy Bypass -File tools\windows\uninstall.ps1
 #>
 [CmdletBinding()]
 param([string[]]$Profiles)
@@ -90,4 +91,4 @@ foreach ($profile in $targets) {
 Say ''
 Say '完成。请重新打开 DeepSeek Harness，确认界面恢复且没有开机动画。'
 Say '如果仍有动画：说明还有第二份安装（另一个 profile 或另一个插件目录），'
-Say '请双击「诊断.cmd」生成报告发给作者。'
+Say '请双击 setup.cmd（菜单选 3「诊断」）生成报告发给作者。'

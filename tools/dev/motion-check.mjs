@@ -7,7 +7,7 @@
  *   3) 分幕文案确实换过（至少 3 种不同状态行）
  *   4) 结束时根节点被移除、done 事件触发（收得干净）
  *
- * 用法：node tools/motion-check.mjs [--template=deep-sonar] [--speed=3] [--chrome=路径]
+ * 用法：node tools/dev/motion-check.mjs [--template=deep-sonar] [--speed=3] [--chrome=路径]
  * 退出码：0 全过 / 1 有失败 / 2 环境不可用（没 Chrome 等）
  */
 import fs from 'node:fs'
@@ -16,7 +16,8 @@ import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+/* 本脚本在 tools/dev/ 下：上两级才是仓库根，模板与 lib 都从仓库根取 */
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const args = Object.fromEntries(process.argv.slice(2).filter((a) => a.startsWith('--')).map((a) => {
   const i = a.indexOf('=')
   return i === -1 ? [a.slice(2), '1'] : [a.slice(2, i), a.slice(i + 1)]

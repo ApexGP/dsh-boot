@@ -7,15 +7,14 @@
 #   · node_modules 下同名的符号链接（真实目录先移到备份，不直接删）
 #   · 不删 pnpm-lock.yaml，不自动启动 DSH
 #
-# 用法：先完全退出桌面端（窗口 + 菜单栏图标），再双击仓库根目录的「卸载-mac.command」；
-#       或者 sh tools/emergency-uninstall.sh [--profiles desktop,web]
+# 用法：先完全退出桌面端（窗口 + 菜单栏图标），再双击仓库根目录的 setup.command（选 2）；
+#       或者 sh tools/macos/uninstall.sh [--profiles desktop,web]
 # ============================================================================
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
+# 公共函数库固定在同目录的 lib/（仓库整理后不再有 tools/lib/）
 if [ -f "$SCRIPT_DIR/lib/mac-common.sh" ]; then
   . "$SCRIPT_DIR/lib/mac-common.sh"
-elif [ -f "$SCRIPT_DIR/../lib/mac-common.sh" ]; then
-  . "$SCRIPT_DIR/../lib/mac-common.sh"
 else
   printf '[x] 缺少公共函数库：%s\n' "$SCRIPT_DIR/lib/mac-common.sh" >&2
   exit 1
@@ -28,7 +27,8 @@ Die() { printf '[x] %s\n' "$*" >&2; exit 1; }
 read_version() {
   sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" 2>/dev/null | head -n 1
 }
-REPO_ROOT=$(dirname "$SCRIPT_DIR")
+# 仓库根：从 tools/macos/ 上两级
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd -P)
 VER=$(read_version "$REPO_ROOT/package.json")
 
 if [ -n "$VER" ]; then Say "dsh-boot-suite v$VER"; fi
@@ -39,7 +39,8 @@ usage() {
 dsh-boot-suite —— macOS 彻底卸载（急救）
 
 用法：
-  sh tools/emergency-uninstall.sh [--profiles desktop,web]
+  sh tools/macos/uninstall.sh [--profiles desktop,web]
+  （也可以双击仓库根目录的 setup.command，选 2）
 
 选项：
   --profiles <a,b>   只处理指定 profile（逗号分隔），默认 desktop / web
@@ -197,5 +198,5 @@ done
 Say ''
 Say '完成。请重新打开 DeepSeek Harness，确认界面恢复且没有开机动画。'
 Say '如果仍有动画：说明还有第二份安装（另一个 profile 或另一个插件目录），'
-Say '请双击仓库根目录的「诊断-mac.command」生成报告发给作者。'
+Say '请双击仓库根目录的 setup.command（选 3）生成报告发给作者。'
 exit 0

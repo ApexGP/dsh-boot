@@ -4,8 +4,8 @@
 // 在 mac 上一条都命不中。这里不启动 DSH、不动真实 ~/.dsh，按四层检查兜底：
 //   1) 文件清单与可执行位（发布包必须带齐，否则 mac 用户解压后无从下手）
 //   2) sh -n 语法（POSIX；Windows 上没有 /bin/sh，跳过）
-//   3) 关键契约字符串（回滚 checkpoint、安装后校验、自动更新、.command 入口）
-//   4) 真跑：profile-json.mjs 全命令 + install-macos.sh --check-only（临时 DSH_HOME）
+//   3) 关键契约字符串（回滚 checkpoint、安装后校验、自动更新、setup.command 入口）
+//   4) 真跑：profile-json.mjs 全命令 + tools/macos/install.sh --check-only（临时 DSH_HOME）
 //
 // 全程零第三方依赖；临时目录跑完即删。
 import fs from 'node:fs'
@@ -41,18 +41,27 @@ try {
   /* ── [1] 文件清单 ─────────────────────────────────────────────────────── */
   console.log('\n[1] macOS 脚本与双击入口文件清单')
   const MAC_SCRIPTS = [
-    'tools/install-macos.sh',
-    'tools/emergency-uninstall.sh',
-    'tools/rollback-version.sh',
-    'tools/doctor.sh',
-    'tools/update-apply.sh',
+    'tools/macos/install.sh',
+    'tools/macos/uninstall.sh',
+    'tools/macos/diagnose.sh',
+    'tools/macos/rollback-version.sh',
+    'tools/macos/update-apply.sh',
+    'tools/macos/setup.sh',
   ]
-  const MAC_LIBS = ['tools/lib/mac-common.sh', 'tools/lib/profile-json.mjs']
-  const MAC_COMMANDS = ['安装-mac.command', '卸载-mac.command', '诊断-mac.command', '打开预览.command']
+  const MAC_LIBS = ['tools/macos/lib/mac-common.sh', 'tools/macos/lib/profile-json.mjs']
+  const MAC_COMMANDS = ['setup.command']
   const ONLINE = 'install-online.sh'
   for (const f of [...MAC_SCRIPTS, ...MAC_LIBS, ...MAC_COMMANDS, ONLINE]) {
     check('存在 ' + f, exists(f))
   }
+  /* 2026-11-05 仓库整理：脚本文件名一律 ASCII（中文只允许出现在内容与输出里）。
+     根目录还留着旧中文入口就说明重排没做干净。 */
+  const SCRIPT_EXT = /\.(cmd|command|ps1|sh)$/i
+  const badName = fs.readdirSync(ROOT, { withFileTypes: true })
+    .filter((e) => e.isFile() && SCRIPT_EXT.test(e.name))
+    .map((e) => e.name)
+    .filter((n) => !/^[\x00-\x7F]+$/.test(n))
+  check('根目录脚本文件名全 ASCII', badName.length === 0, badName.join('、'))
 
   /* ── [2] POSIX 语法与可执行位 ─────────────────────────────────────────── */
   console.log('\n[2] POSIX sh 语法（sh -n）与可执行位')
@@ -60,12 +69,12 @@ try {
     skip('sh -n（Windows 上没有 /bin/sh，安装/更新脚本只在 mac 上执行）')
     skip('可执行位（Windows 文件系统不记录 Unix 权限位）')
   } else {
-    for (const f of [...MAC_SCRIPTS, 'tools/lib/mac-common.sh', ONLINE, ...MAC_COMMANDS]) {
+    for (const f of [...MAC_SCRIPTS, 'tools/macos/lib/mac-common.sh', ONLINE, ...MAC_COMMANDS]) {
       if (!exists(f)) { check('sh -n ' + f, false, '文件不存在'); continue }
       const res = spawnSync('sh', ['-n', path.join(ROOT, f)], { encoding: 'utf8' })
       check('sh -n ' + f, res.status === 0, String((res.stderr || '').trim()).slice(0, 200))
     }
-    for (const f of [...MAC_SCRIPTS, 'tools/lib/mac-common.sh', ONLINE, ...MAC_COMMANDS]) {
+    for (const f of [...MAC_SCRIPTS, 'tools/macos/lib/mac-common.sh', ONLINE, ...MAC_COMMANDS]) {
       if (!exists(f)) { check('可执行位 ' + f, false, '文件不存在'); continue }
       const mode = fs.statSync(path.join(ROOT, f)).mode
       check('可执行位 ' + f, (mode & 0o111) !== 0, 'mode=' + (mode & 0o777).toString(8))
@@ -83,32 +92,40 @@ try {
     for (const n of needles) check(file + ' 含「' + n + '」', text.includes(n))
   }
   /* 安装器：检查模式/强制模式/profile 选择、更新前回滚 checkpoint、安装后按真实文件校验 */
-  expectContains('tools/install-macos.sh', [
+  expectContains('tools/macos/install.sh', [
     '--check-only', '--force', '--profiles',
     '紧急回滚-V', 'rollback-version.sh', 'DSH_BOOT_SUITE_ROLLBACK', '_backup-install-',
     'dsh plugin', 'verify-installed', 'managed exclusively',
   ])
   /* 更新执行器：宿主传参、zip 校验、pkg.new/pkg.old 替换、更新日志 */
-  expectContains('tools/update-apply.sh', [
+  expectContains('tools/macos/update-apply.sh', [
     '--zip', '--version', '--exe', '--config',
-    'unzip -t', 'pkg.new', 'pkg.old', 'install-macos.sh', '更新日志',
+    'unzip -t', 'pkg.new', 'pkg.old', 'tools/macos/install.sh', '更新日志',
   ])
-  expectContains('tools/rollback-version.sh', ['--target-pkg', '--no-start', 'DSH_BOOT_SUITE_ROLLBACK'])
-  expectContains('tools/emergency-uninstall.sh', [
+  expectContains('tools/macos/rollback-version.sh', ['--target-pkg', '--no-start', 'DSH_BOOT_SUITE_ROLLBACK'])
+  /* 2026-11-05 仓库整理：重排前装的旧版本目录里安装器在 tools/install-macos.sh，
+     回滚脚本必须保留这个旧布局分支（属于兼容回退，不是旧路径残留）。 */
+  expectContains('tools/macos/rollback-version.sh', ['tools/install-macos.sh'])
+  expectContains('tools/macos/uninstall.sh', [
     '_backup-uninstall-', 'dsh-boot-suite', 'dsh-startup-screen', 'dsh-chat-wallpaper',
   ])
-  expectContains('tools/doctor.sh', ['dsh诊断-'])
+  expectContains('tools/macos/diagnose.sh', ['dsh诊断-'])
   expectContains(ONLINE, ['dsh-boot-suite-win.zip', 'archive/refs/heads/main.zip'])
-  /* 根目录 4 个 .command：双击后必须调对应脚本 */
-  expectContains('安装-mac.command', ['install-macos.sh'])
-  expectContains('卸载-mac.command', ['emergency-uninstall.sh'])
-  expectContains('诊断-mac.command', ['doctor.sh'])
-  expectContains('打开预览.command', ['open-preview.sh'])
+  /* 2026-11-05 仓库整理：根目录收敛成 setup.command 一个双击入口，菜单在 tools/macos/setup.sh。
+     setup.command 只负责 cd + exec，具体菜单项与调用全在 setup.sh 里。 */
+  expectContains('setup.command', ['tools/macos/setup.sh'])
+  expectContains('tools/macos/setup.sh', [
+    'install.sh', 'uninstall.sh', 'diagnose.sh', 'preview/index.html',
+    '安装', '卸载', '诊断',
+  ])
 
   /* ── [4] 宿主自动更新的 macOS 分支 ───────────────────────────────────── */
   console.log('\n[4] lib/host-startup.js 的 macOS 自动更新分支')
   const hostStartup = read('lib/host-startup.js')
-  check('宿主管引用 tools/update-apply.sh', hostStartup.includes('update-apply.sh'))
+  const macUpdaterRef =
+    /['"]tools['"]\s*,\s*['"]macos['"]\s*,\s*['"]update-apply\.sh['"]/.test(hostStartup) ||
+    hostStartup.includes('tools/macos/update-apply.sh')
+  check('宿主管引用 tools/macos/update-apply.sh', macUpdaterRef)
   check("宿主管含 darwin 分支", hostStartup.includes("'darwin'") || hostStartup.includes('"darwin"'))
   check('宿主管含 curl（mac 下载兜底）', hostStartup.includes('curl'))
   check('宿主管用 IS_MAC 或 process.platform 判定平台',
@@ -117,10 +134,10 @@ try {
   /* ── [5] 其它跨平台工具 ───────────────────────────────────────────────── */
   console.log('\n[5] 跨平台工具（Chrome 路径 / bundle patch 注释）')
   const CHROME_MAC = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-  const motion = read('tools/motion-check.mjs')
+  const motion = read('tools/dev/motion-check.mjs')
   check('motion-check 含 macOS Chrome 路径', motion.includes(CHROME_MAC))
   check('motion-check 保留 CHROME_PATH 覆盖逻辑', motion.includes('CHROME_PATH'))
-  const frames = read('tools/export-frames.mjs')
+  const frames = read('tools/dev/export-frames.mjs')
   check('export-frames 含 macOS Chrome 路径', frames.includes(CHROME_MAC))
   check('export-frames 保留 CHROME_PATH 覆盖逻辑', frames.includes('CHROME_PATH'))
   const patch = read('cordis.patch.yml')
@@ -142,7 +159,7 @@ try {
     dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', 'dsh-plugin-desktop-notify', 'dsh-plugin-desktop-notify', 'legacy-plugin'] } },
   }, null, 2) + '\n', 'utf8')
   const spec = 'link:' + path.join(work, 'repo-link')
-  const pjRun = (...a) => spawnSync(process.execPath, [path.join(ROOT, 'tools/lib/profile-json.mjs'), ...a], { encoding: 'utf8' })
+  const pjRun = (...a) => spawnSync(process.execPath, [path.join(ROOT, 'tools/macos/lib/profile-json.mjs'), ...a], { encoding: 'utf8' })
   const readPkg = () => JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
   const hasOwn = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k)
 
@@ -215,12 +232,12 @@ try {
   check('remove-plugin 保留无关依赖与插件',
     pkg.dependencies['@deepseek-ai/dsh-base'] === '1.0.0' && pkg.dsh.profile.bundles.includes('legacy-plugin'))
 
-  /* ── [7] install-macos.sh --check-only（临时 DSH_HOME） ───────────────── */
-  console.log('\n[7] install-macos.sh --check-only 集成（临时 DSH_HOME，不修改任何文件）')
+  /* ── [7] tools/macos/install.sh --check-only（临时 DSH_HOME） ─────────── */
+  console.log('\n[7] tools/macos/install.sh --check-only 集成（临时 DSH_HOME，不修改任何文件）')
   if (isWin) {
-    skip('install-macos.sh --check-only（Windows 上没有 /bin/sh）')
-  } else if (!exists('tools/install-macos.sh')) {
-    check('install-macos.sh --check-only 集成测试', false, '文件不存在')
+    skip('tools/macos/install.sh --check-only（Windows 上没有 /bin/sh）')
+  } else if (!exists('tools/macos/install.sh')) {
+    check('tools/macos/install.sh --check-only 集成测试', false, '文件不存在')
   } else {
     const dshHome = path.join(work, 'dsh-home')
     const fakeProfileDir = path.join(dshHome, 'profiles', 'desktop')
@@ -233,7 +250,7 @@ try {
       dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
     }, null, 2) + '\n', 'utf8')
     const hashBefore = crypto.createHash('sha256').update(fs.readFileSync(fakePkgPath)).digest('hex')
-    const runCheck = spawnSync('sh', [path.join(ROOT, 'tools/install-macos.sh'), '--check-only'], {
+    const runCheck = spawnSync('sh', [path.join(ROOT, 'tools/macos/install.sh'), '--check-only'], {
       encoding: 'utf8',
       timeout: 120000,
       env: { ...process.env, DSH_HOME: dshHome, DSH_SKIP_PROCESS_CHECK: '1', DSH_SKIP_REOPEN: '1' },
@@ -273,7 +290,7 @@ try {
       if (hits) offenders.push(rel + ':' + (i + 1) + ' ' + hits.join(' ') + '  ' + line.trim().slice(0, 80))
     })
   }
-  check('扫描到 ' + scanTargets.length + ' 个 .sh/.command 文件', scanTargets.length >= 12, String(scanTargets.length))
+  check('扫描到 ' + scanTargets.length + ' 个 .sh/.command 文件', scanTargets.length >= 8, String(scanTargets.length))
   check('没有「$VAR 紧跟非 ASCII 字符」的写法', offenders.length === 0, offenders.slice(0, 5).join(' | '))
 
   /* ── [9] unzip -Z1 中文名 + BSD tr 的发布阻断回归 ─────────────────────── */
@@ -282,7 +299,7 @@ try {
      BSD tr 读到非法字节直接报「Illegal byte sequence」并返回 1。update-apply.sh 里
      tr -d CR < 文件列表 | sed ... 因此会产出空文件，自动更新 100% 失败。
      修法是在 tr 前加 LC_ALL=C（按字节处理，不做多字节解码）。 */
-  const updateApplyText = exists('tools/update-apply.sh') ? read('tools/update-apply.sh') : ''
+  const updateApplyText = exists('tools/macos/update-apply.sh') ? read('tools/macos/update-apply.sh') : ''
   const TR_CR = /tr\s+-d\s+['"]\\r['"]/g
   const trSites = []
   for (const hit of updateApplyText.matchAll(TR_CR)) {
@@ -303,6 +320,8 @@ try {
     fs.mkdirSync(trSrc, { recursive: true })
     fs.writeFileSync(path.join(trSrc, 'a.txt'), 'a\n')
     fs.writeFileSync(path.join(trSrc, 'b.txt'), 'b\n')
+    /* 临时 zip fixture，不引用仓库文件：故意放一个中文名，复现 macOS unzip -Z1
+       输出非法 UTF-8 字节、BSD tr 直接报错的回归场景。 */
     fs.writeFileSync(path.join(trSrc, '安装.cmd'), 'x\n')
     const trZip = path.join(trWork, 'names.zip')
     const zipRes = spawnSync('zip', ['-r', '-q', trZip, '.'], { cwd: trSrc, encoding: 'utf8' })

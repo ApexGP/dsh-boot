@@ -8,7 +8,7 @@
   只换插件版本，不碰用户配置（~/.dsh/*.json、模板、底图）。
 
   用法：
-    powershell -NoProfile -ExecutionPolicy Bypass -File tools\rollback-version.ps1 -TargetPkg "<旧版本pkg目录>" -Profile desktop
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools\windows\rollback-version.ps1 -TargetPkg "<旧版本pkg目录>" -Profile desktop
     加 -CheckOnly 只检查、不改动；加 -NoStart 回滚后不自动打开 DSH。
 #>
 [CmdletBinding()]
@@ -45,7 +45,13 @@ try {
   $tobj = [System.IO.File]::ReadAllText((Join-Path $TargetPkg 'package.json'), [System.Text.Encoding]::UTF8) | ConvertFrom-Json
 } catch { Die '目标版本的 package.json 无法解析' }
 if (-not (Test-Path (Join-Path $TargetPkg 'lib\index.js'))) { Die '目标版本缺少 lib\index.js，目录不完整' }
-if (-not (Test-Path (Join-Path $TargetPkg 'tools\install.ps1'))) { Die '目标版本缺少 tools\install.ps1，无法回滚' }
+# 回滚目标可能是两种布局，按顺序找安装器：
+#   · 2.16.11 起（重排后）：tools\windows\install.ps1
+#   · 2.16.10 及以前（重排前）：tools\install.ps1
+# 旧路径在这里是「回退旧版本」的兼容分支，不是残留 —— 回滚按钮经常指向老版本目录。
+$installerRel = 'tools\windows\install.ps1'
+if (-not (Test-Path (Join-Path $TargetPkg $installerRel))) { $installerRel = 'tools\install.ps1' }
+if (-not (Test-Path (Join-Path $TargetPkg $installerRel))) { Die '目标版本缺少安装器（tools\windows\install.ps1 或 tools\install.ps1），无法回滚' }
 $targetVer = [string]$tobj.version
 Log ('目标版本：v' + $targetVer)
 
@@ -75,7 +81,7 @@ if (Test-Path (Join-Path $ProfileDir 'pnpm-lock.yaml')) {
 }
 Log ('当前 profile 状态已备份到：' + $keep)
 
-$installer = Join-Path $TargetPkg 'tools\install.ps1'
+$installer = Join-Path $TargetPkg $installerRel
 Log '运行旧版本安装器（把插件 link 回旧版本目录）…'
 $env:DSH_BOOT_SUITE_ROLLBACK = '1'
 try {

@@ -10,8 +10,8 @@
  *   现在改成「模板整段写 + 写后读回校验」，从流程上避免同类事故。
  *
  * 用法：
- *   node tools/make-upgrade-helper.mjs <版本号>
- *   node tools/make-upgrade-helper.mjs 2.13.9 --desktop "C:/Users/Admin/Desktop"
+ *   node tools/dev/make-upgrade-helper.mjs <版本号>
+ *   node tools/dev/make-upgrade-helper.mjs 2.13.9 --desktop "C:/Users/Admin/Desktop"
  */
 import fs from 'node:fs'
 import os from 'node:os'
@@ -21,7 +21,7 @@ const args = process.argv.slice(2)
 const version = args[0]
 const versionRe = /^\d+\.\d+\.\d+$/
 if (!version || !versionRe.test(version)) {
-  console.error('[x] 用法：node tools/make-upgrade-helper.mjs <版本号> [--desktop <桌面目录>]')
+  console.error('[x] 用法：node tools/dev/make-upgrade-helper.mjs <版本号> [--desktop <桌面目录>]')
   process.exit(1)
 }
 
@@ -29,14 +29,14 @@ let desktop = path.join(os.homedir(), 'Desktop')
 const di = args.indexOf('--desktop')
 if (di >= 0 && args[di + 1]) desktop = args[di + 1]
 
-const pkgInstall = `%USERPROFILE%\\.dsh\\boot-suite-updates\\${version}\\pkg\\tools\\install.ps1`
+const pkgInstall = `%USERPROFILE%\\.dsh\\boot-suite-updates\\${version}\\pkg\\tools\\windows\\install.ps1`
 const helperName = `升级到 ${version}（先完全退出 DSH 再双击）.cmd`
 const helperPath = path.join(desktop, helperName)
 
 /* 自检 0（2026-11-02 事故）：暂存包必须真的在 <updates>\<版本>\pkg\ 下，
    否则生成的助手双击后必然报 “install.ps1 不存在”。生成前先确认，绝不给用户一个空指路牌。 */
 const stagedPkg = path.join(os.homedir(), '.dsh', 'boot-suite-updates', version, 'pkg')
-const stagedInstall = path.join(stagedPkg, 'tools', 'install.ps1')
+const stagedInstall = path.join(stagedPkg, 'tools', 'windows', 'install.ps1')
 if (!fs.existsSync(stagedInstall)) {
   console.error(`[x] 生成失败：暂存包不完整，缺少 ${stagedInstall}`)
   console.error(`[x] 先把发布包解压到 ${stagedPkg}（注意是 pkg 子目录），再来生成桌面助手。`)
@@ -78,9 +78,9 @@ if (bad >= 0) {
   console.error(`[x] 生成失败：第 ${bad + 1} 行只剩版本号 ${version}（拼接被拆开了）`)
   process.exit(1)
 }
-/* 自检 2：安装器路径必须完整包含版本号与 install.ps1 */
-if (!lines.some(l => l.includes(`\\${version}\\pkg\\tools\\install.ps1`))) {
-  console.error('[x] 生成失败：install.ps1 完整路径缺失')
+/* 自检 2：安装器路径必须完整包含版本号与 tools\windows\install.ps1 */
+if (!lines.some(l => l.includes(`\\${version}\\pkg\\tools\\windows\\install.ps1`))) {
+  console.error('[x] 生成失败：tools\\windows\\install.ps1 完整路径缺失')
   process.exit(1)
 }
 /* 自检 3：纯 ASCII（避免 cmd 代码页把中文路径/文件名截断） */
@@ -99,8 +99,8 @@ if (back.length !== lines.length || back.some((l, i) => l !== lines[i])) {
   console.error('[x] 生成失败：写回内容与模板不一致')
   process.exit(1)
 }
-if (!back.some(l => l.includes(`\\${version}\\pkg\\tools\\install.ps1`))) {
-  console.error('[x] 生成失败：读回后 install.ps1 路径不完整')
+if (!back.some(l => l.includes(`\\${version}\\pkg\\tools\\windows\\install.ps1`))) {
+  console.error('[x] 生成失败：读回后 tools\\windows\\install.ps1 路径不完整')
   process.exit(1)
 }
 

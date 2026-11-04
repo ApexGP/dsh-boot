@@ -9,10 +9,10 @@ if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
 }
 const pkg = JSON.parse(buf.toString('utf8'));
 if (!pkg.version) throw new Error('package.json 缺少 version');
-for (const f of ['lib/index.js', 'lib/splash.js', 'lib/client.js', 'lib/assets/default-background.jpg', 'templates', 'tools/install.ps1', 'tools/update-apply.ps1', 'tools/rollback-version.ps1', 'lib/assets/voices/manifest.json']) {
+for (const f of ['lib/index.js', 'lib/splash.js', 'lib/client.js', 'lib/assets/default-background.jpg', 'templates', 'tools/windows/install.ps1', 'tools/windows/update-apply.ps1', 'tools/windows/rollback-version.ps1', 'lib/assets/voices/manifest.json']) {
   if (!fs.existsSync(path.join(root, f))) throw new Error('缺少 ' + f);
 }
-const installPs1 = fs.readFileSync(path.join(root, 'tools/install.ps1'), 'utf8');
+const installPs1 = fs.readFileSync(path.join(root, 'tools/windows/install.ps1'), 'utf8');
 for (const needle of ['rollback-version.ps1', '紧急回滚-V', 'DSH_BOOT_SUITE_ROLLBACK', 'checkpoint']) {
   if (!installPs1.includes(needle)) throw new Error('install.ps1 缺少更新前回滚 checkpoint：' + needle);
 }
@@ -21,7 +21,7 @@ for (const needle of ['rollback-version.ps1', '紧急回滚-V', 'DSH_BOOT_SUITE_
 for (const needle of ['Test-InstalledOk', '安装后校验失败', '命令行的退出码是 0']) {
   if (!installPs1.includes(needle)) throw new Error('install.ps1 缺少安装后校验兜底：' + needle);
 }
-const rollbackPs1 = fs.readFileSync(path.join(root, 'tools/rollback-version.ps1'), 'utf8');
+const rollbackPs1 = fs.readFileSync(path.join(root, 'tools/windows/rollback-version.ps1'), 'utf8');
 for (const needle of ['TargetPkg', 'CheckOnly', 'DSH_BOOT_SUITE_ROLLBACK', '回滚日志']) {
   if (!rollbackPs1.includes(needle)) throw new Error('rollback-version.ps1 缺少关键逻辑：' + needle);
 }
@@ -165,11 +165,11 @@ if (!splashSrc.includes('vp0.catch')) throw new Error('splash.js 未静默 play(
 const clientSrc = fs.readFileSync(path.join(root, 'lib/client.js'), 'utf8')
 if (!clientSrc.includes("'whale-girl-scan-4k-h264': 1")) throw new Error('client.js 的正式模板白名单缺少 4K H.264')
 /* v2.16.2：安装器代理加固 */
-const installPs1V2162 = fs.readFileSync(path.join(root, 'tools/install.ps1'), 'utf8')
+const installPs1V2162 = fs.readFileSync(path.join(root, 'tools/windows/install.ps1'), 'utf8')
 if (!installPs1V2162.includes('Get-ProxyInfo')) throw new Error('install.ps1 缺少代理探测')
 if (!installPs1V2162.includes('npm_config_fetch_timeout')) throw new Error('install.ps1 缺少 pnpm 网络超时设置')
 if (!installPs1V2162.includes('registry.npmmirror.com')) throw new Error('install.ps1 缺少国内镜像重试')
-const helperGen = fs.readFileSync(path.join(root, 'tools/make-upgrade-helper.mjs'), 'utf8')
+const helperGen = fs.readFileSync(path.join(root, 'tools/dev/make-upgrade-helper.mjs'), 'utf8')
 if (!helperGen.includes('turn off any proxy')) throw new Error('升级助手缺少代理提示')
 /* v2.16.3：设置页下拉改自绘，跟随皮肤 3D 面板平面 */
 if (!clientSrc.includes('__ss_selectMenu')) throw new Error('client.js 缺少自绘下拉菜单')
@@ -216,26 +216,116 @@ if (!clientSrc.includes('之一ONETHING')) throw new Error('鸣谢缺少皮肤�
 if (!clientSrc.includes('胡萨尔cC')) throw new Error('鸣谢缺少余额表盘原作者胡萨尔cC')
 if (!clientSrc.includes('oenthing/blockade-orange-dsh-skin')) throw new Error('鸣谢缺少皮肤仓库链接')
 if (!clientSrc.includes('goooooooeg/dsh-balance-hud')) throw new Error('鸣谢缺少表盘仓库链接')
-/* v2.16.11：macOS 支持 —— 同一份发布包必须能直接在 mac 上安装/更新/回滚/诊断 */
-const MAC_FILES = [
-  'tools/install-macos.sh', 'tools/emergency-uninstall.sh', 'tools/rollback-version.sh',
-  'tools/doctor.sh', 'tools/update-apply.sh', 'tools/lib/mac-common.sh',
-  'tools/lib/profile-json.mjs', 'install-online.sh',
-  '安装-mac.command', '卸载-mac.command', '诊断-mac.command', '打开预览.command',
+/* v2.16.11：macOS 支持 —— 同一份发布包必须能直接在 mac 上安装/更新/回滚/诊断。
+   2026-11-05 仓库整理后，脚本按平台分到 tools/windows、tools/macos、tools/dev，
+   根目录只留四个入口脚本。下面把新布局、文件名 ASCII、脚本编码与交叉引用一起钉住。 */
+const LAYOUT_FILES = [
+  /* 根目录四个入口 */
+  'setup.cmd', 'setup.command', 'install-online.ps1', 'install-online.sh',
+  /* Windows：菜单 + 安装 / 更新 / 回滚 / 卸载 / 诊断 */
+  'tools/windows/setup.ps1', 'tools/windows/install.ps1', 'tools/windows/update-apply.ps1',
+  'tools/windows/rollback-version.ps1', 'tools/windows/uninstall.ps1', 'tools/windows/diagnose.ps1',
+  /* macOS：菜单 + 安装 / 更新 / 回滚 / 卸载 / 诊断 + 公共库 */
+  'tools/macos/setup.sh', 'tools/macos/install.sh', 'tools/macos/update-apply.sh',
+  'tools/macos/rollback-version.sh', 'tools/macos/uninstall.sh', 'tools/macos/diagnose.sh',
+  'tools/macos/lib/mac-common.sh', 'tools/macos/lib/profile-json.mjs',
+  /* 维护者工具（不进插件运行路径，但仓库/发布包必须有） */
+  'tools/dev/build-release.mjs', 'tools/dev/motion-check.mjs', 'tools/dev/export-frames.mjs',
+  'tools/dev/stage-local.mjs', 'tools/dev/make-upgrade-helper.mjs',
+  'tools/dev/make-backup.ps1', 'tools/dev/rollback.ps1',
+  'tools/editor.html', 'tools/README.md',
 ];
-for (const f of MAC_FILES) {
-  if (!fs.existsSync(path.join(root, f))) throw new Error('缺少 macOS 支持文件：' + f);
+const missingLayout = LAYOUT_FILES.filter((f) => !fs.existsSync(path.join(root, f)));
+if (missingLayout.length) throw new Error('新布局缺少必需文件：' + missingLayout.join('、'));
+
+/* 脚本文件名一律 ASCII：中文只允许出现在脚本内容与输出里。
+   文件名的非 ASCII 会在 Windows zip/解压、shell glob 里连环踩坑，这里直接拦住。
+   范围 = 根目录文件 + tools/ 递归（docs/ 不随包发布，不在此列）。 */
+const SCRIPT_EXT = /\.(cmd|command|ps1|sh)$/i;
+const scriptFiles = [];
+(function collectScripts(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === '.git' || e.name === 'node_modules') continue;
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) collectScripts(full);
+    else if (SCRIPT_EXT.test(e.name)) scriptFiles.push(full);
+  }
+})(path.join(root, 'tools'));
+for (const e of fs.readdirSync(root, { withFileTypes: true })) {
+  if (e.isFile() && SCRIPT_EXT.test(e.name)) scriptFiles.push(path.join(root, e.name));
 }
-/* 根目录下的 mac 双击入口与在线安装器必须进 npm 包（tools/ 目录本身整包包含） */
-for (const f of ['安装-mac.command', '卸载-mac.command', '诊断-mac.command', '打开预览.command', 'install-online.sh']) {
-  if (!(pkg.files || []).includes(f)) throw new Error('package.json 的 files 缺少 macOS 根文件：' + f);
+const nonAsciiNames = scriptFiles.map((f) => path.relative(root, f)).filter((rel) => !/^[\x00-\x7F]+$/.test(rel));
+if (nonAsciiNames.length) throw new Error('脚本文件名含非 ASCII 字符（中文只许出现在内容/输出）：' + nonAsciiNames.join('、'));
+
+/* .ps1 必须 UTF-8 带 BOM（PowerShell 5.1 用 Get-Content 读无 BOM UTF-8 中文会乱码）；
+   .cmd 必须纯 ASCII（UTF-8 无 BOM 的 .cmd 会被 cmd 当 GBK 执行成乱码）。 */
+const badBom = [];
+const badAscii = [];
+for (const file of scriptFiles) {
+  const rel = path.relative(root, file);
+  if (/\.ps1$/i.test(file)) {
+    const b = fs.readFileSync(file);
+    if (!(b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF)) badBom.push(rel);
+  } else if (/\.cmd$/i.test(file)) {
+    const b = fs.readFileSync(file);
+    if (b.some((x) => x > 0x7F)) badAscii.push(rel);
+  }
 }
-const installMacSh = fs.readFileSync(path.join(root, 'tools/install-macos.sh'), 'utf8');
+if (badBom.length) throw new Error('.ps1 缺少 UTF-8 BOM（首三字节 EF BB BF）：' + badBom.join('、'));
+if (badAscii.length) throw new Error('.cmd 不是纯 ASCII：' + badAscii.join('、'));
+
+/* 交叉引用：目录重排后最容易漏的就是「脚本里还写着旧路径」，逐条钉住。 */
+const readText = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+const WIN_INSTALL = /tools[\\/]windows[\\/]install\.ps1/;
+if (!WIN_INSTALL.test(readText('tools/windows/update-apply.ps1'))) throw new Error('windows/update-apply.ps1 未引用 tools/windows/install.ps1');
+if (!WIN_INSTALL.test(readText('tools/windows/rollback-version.ps1'))) throw new Error('windows/rollback-version.ps1 未引用 tools/windows/install.ps1');
+if (!WIN_INSTALL.test(readText('install-online.ps1'))) throw new Error('install-online.ps1 未引用 tools/windows/install.ps1');
+const installPs1NewLayout = readText('tools/windows/install.ps1');
+if (!/Split-Path\s+-Parent\s+\(\s*Split-Path\s+-Parent\s+\$PSScriptRoot\s*\)/i.test(installPs1NewLayout)) {
+  throw new Error('windows/install.ps1 的 $RepoRoot 未按「脚本上两级」修正');
+}
+if (!/tools[\\/]windows[\\/]setup\.ps1/.test(readText('setup.cmd'))) throw new Error('setup.cmd 未调用 tools/windows/setup.ps1');
+const MAC_INSTALL = /tools\/macos\/install\.sh/;
+if (!MAC_INSTALL.test(readText('tools/macos/update-apply.sh'))) throw new Error('tools/macos/update-apply.sh 未引用 tools/macos/install.sh');
+if (!MAC_INSTALL.test(readText('tools/macos/rollback-version.sh'))) throw new Error('tools/macos/rollback-version.sh 未引用 tools/macos/install.sh');
+if (!MAC_INSTALL.test(readText('install-online.sh'))) throw new Error('install-online.sh 未引用 tools/macos/install.sh');
+if (!/tools\/macos\/setup\.sh/.test(readText('setup.command'))) throw new Error('setup.command 未调用 tools/macos/setup.sh');
+
+/* 兼容垫片（下版删除）：旧版（≤2.16.10）自动更新器解压新 zip 后，会硬性检查并运行
+   tools/install.ps1。目录重排后必须保留这个只做转发的垫片，否则老用户升级直接断链。
+   注意：这是「新布局的兼容层」，不是旧路径残留，不要按残留删掉。 */
+if (!fs.existsSync(path.join(root, 'tools/install.ps1'))) {
+  throw new Error('缺少兼容垫片 tools/install.ps1（旧版 ≤2.16.10 的自动更新会断链）');
+}
+const compatShim = readText('tools/install.ps1');
+if (!WIN_INSTALL.test(compatShim)) throw new Error('tools/install.ps1 兼容垫片未转发到 tools/windows/install.ps1');
+if (!/@args|@PSBoundParameters|\$args\b/i.test(compatShim)) {
+  throw new Error('tools/install.ps1 兼容垫片缺少参数转发（@args / $args / @PSBoundParameters）');
+}
+/* 打包必需清单必须带垫片：旧版更新器只看 zip 里有没有 tools/install.ps1 */
+if (!/['"]tools\/install\.ps1['"]/.test(readText('tools/dev/build-release.mjs'))) {
+  throw new Error('build-release.mjs 的 REQUIRED_FILES 缺少兼容垫片 tools/install.ps1');
+}
+
+/* 回滚脚本要能回退旧布局：目录重排前装的版本只有 tools/install.ps1 / tools/install-macos.sh。
+   旧路径在这里是「回退旧版本」的兼容分支，同样不是残留。 */
+if (!/tools[\\/]install\.ps1/.test(readText('tools/windows/rollback-version.ps1'))) {
+  throw new Error('windows/rollback-version.ps1 缺少旧布局回退分支（tools/install.ps1）');
+}
+if (!/tools\/install-macos\.sh/.test(readText('tools/macos/rollback-version.sh'))) {
+  throw new Error('tools/macos/rollback-version.sh 缺少旧布局回退分支（tools/install-macos.sh）');
+}
+
+/* 根目录入口必须进 npm 包（tools/ 整目录本来就在 files 里，不用重复列） */
+for (const f of ['setup.cmd', 'setup.command', 'install-online.ps1', 'install-online.sh']) {
+  if (!(pkg.files || []).includes(f)) throw new Error('package.json 的 files 缺少根入口：' + f);
+}
+const installMacSh = readText('tools/macos/install.sh');
 for (const needle of ['--check-only', '--force', '--profiles', '紧急回滚-V', 'DSH_BOOT_SUITE_ROLLBACK', 'verify-installed', 'managed exclusively']) {
-  if (!installMacSh.includes(needle)) throw new Error('install-macos.sh 缺少关键逻辑：' + needle);
+  if (!installMacSh.includes(needle)) throw new Error('tools/macos/install.sh 缺少关键逻辑：' + needle);
 }
-const updateApplySh = fs.readFileSync(path.join(root, 'tools/update-apply.sh'), 'utf8');
-for (const needle of ['--zip', '--version', 'unzip -t', 'pkg.new', 'pkg.old', 'install-macos.sh', '更新日志']) {
-  if (!updateApplySh.includes(needle)) throw new Error('update-apply.sh 缺少关键逻辑：' + needle);
+const updateApplySh = readText('tools/macos/update-apply.sh');
+for (const needle of ['--zip', '--version', 'unzip -t', 'pkg.new', 'pkg.old', 'tools/macos/install.sh', '更新日志']) {
+  if (!updateApplySh.includes(needle)) throw new Error('tools/macos/update-apply.sh 缺少关键逻辑：' + needle);
 }
-console.log('ok  package.json version=' + pkg.version + '，无 BOM，关键文件齐全（含更新前回滚 checkpoint 与 macOS 安装/更新/回滚/诊断脚本）');
+console.log('ok  package.json version=' + pkg.version + '，无 BOM；新布局文件齐全、脚本文件名全 ASCII、.ps1 带 BOM、.cmd 纯 ASCII、交叉引用正确（含 macOS 安装/更新/回滚/诊断链）');
