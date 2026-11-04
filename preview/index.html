@@ -157,12 +157,12 @@
     mode: 'always',
     theme: 'light',
     speed: 1,
-    requireInteraction: true,
+    requireInteraction: false,
     allowSkip: true,
     sound: false,
-    identity: 'JOYCE MOORE',
-    identityId: '0087',
-    accessLevel: '3',
+    identity: 'ApexGP',
+    identityId: '66',
+    accessLevel: '0',
     brand1: 'DEEPSEEK',
     brand2: 'SYNTHESIZE INTELLIGENCE',
     brand3a: 'HARNESS',
@@ -189,16 +189,16 @@
   <div class="pane">
     <div class="row">
       <label>身份名称（终幕「欢迎 xxx 访问」）</label>
-      <input type="text" id="fIdentity" value="JOYCE MOORE" maxlength="48">
+      <input type="text" id="fIdentity" value="ApexGP" maxlength="48">
     </div>
     <div class="row2">
       <div class="row">
         <label>身份编号</label>
-        <input type="text" id="fId" value="0087" maxlength="12">
+        <input type="text" id="fId" value="66" maxlength="12">
       </div>
       <div class="row">
         <label>权限等级</label>
-        <input type="text" id="fLevel" value="3" maxlength="32">
+        <input type="text" id="fLevel" value="0" maxlength="32">
       </div>
     </div>
     <div class="row2">
@@ -214,7 +214,7 @@
         <input type="range" id="fSpeed" min="0.35" max="3" step="0.05" value="1">
       </div>
     </div>
-    <div class="chk"><input type="checkbox" id="fInteract" checked><label for="fInteract">需要人工确认（第 1、2 步停下来等按钮）</label></div>
+    <div class="chk"><input type="checkbox" id="fInteract"><label for="fInteract">需要人工确认（第 1、2 步停下来等按钮；默认关闭 = 整段自动播放）</label></div>
     <div class="chk"><input type="checkbox" id="fSkip" checked><label for="fSkip">允许跳过（右上角 SKIP / Esc）</label></div>
 
     <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:10px;display:flex;flex-direction:column;gap:10px">
@@ -310,18 +310,18 @@
           <div class="__ss_group">
             <div class="__ss_groupTitle">身份资料</div>
             <div class="__ss_field"><label class="__ss_label">身份名称</label>
-              <input class="__ss_input" type="text" id="sIdentity" value="JOYCE MOORE" maxlength="64">
+              <input class="__ss_input" type="text" id="sIdentity" value="ApexGP" maxlength="64">
               <div class="__ss_hint">终幕「欢迎 xxx 访问 / WELCOME, XXX」里的 xxx，也出现在第二步的身份卡上。</div>
             </div>
             <div class="__ss_two">
-              <div class="__ss_field"><label class="__ss_label">身份编号</label><input class="__ss_input __ss_inputMono" type="text" id="sId" value="0087"><div class="__ss_hint">显示在身份卡上，建议用数字编号（如 0087）。</div></div>
-              <div class="__ss_field"><label class="__ss_label">权限等级</label><input class="__ss_input __ss_inputMono" type="text" id="sLevel" value="3"></div>
+              <div class="__ss_field"><label class="__ss_label">身份编号</label><input class="__ss_input __ss_inputMono" type="text" id="sId" value="66"><div class="__ss_hint">显示在身份卡上，建议用数字编号（如 66）。</div></div>
+              <div class="__ss_field"><label class="__ss_label">权限等级</label><input class="__ss_input __ss_inputMono" type="text" id="sLevel" value="0"></div>
             </div>
           </div>
 
           <div class="__ss_group">
             <div class="__ss_groupTitle">交互</div>
-            <label class="__ss_check"><input type="checkbox" checked id="sInteract"><span class="__ss_checkText"><span>需要人工确认</span><span class="__ss_hint">第 1、2 步停下来等按钮 / Enter / 空格；关闭则整段自动播放。</span></span></label>
+            <label class="__ss_check"><input type="checkbox" id="sInteract"><span class="__ss_checkText"><span>需要人工确认</span><span class="__ss_hint">第 1、2 步停下来等按钮 / Enter / 空格；关闭则整段自动播放。</span></span></label>
             <label class="__ss_check"><input type="checkbox" checked id="sSkip"><span class="__ss_checkText"><span>允许跳过</span><span class="__ss_hint">右上角显示 SKIP，按 Esc 也能直接进主界面。</span></span></label>
             <label class="__ss_check"><input type="checkbox" id="sSound"><span class="__ss_checkText"><span>音效</span><span class="__ss_hint">默认关闭；开启后交互确认时有轻微电子音。</span></span></label>
           </div>
@@ -382,9 +382,9 @@
 
   function applyConfig() {
     var c = window.__DSH_STARTUP__;
-    c.identity = $('fIdentity').value || 'JOYCE MOORE';
+    c.identity = $('fIdentity').value || 'ApexGP';
     c.identityId = $('fId').value || '';
-    c.accessLevel = $('fLevel').value || '3';
+    c.accessLevel = $('fLevel').value || '0';
     c.theme = $('fTheme').value;
     c.speed = Number($('fSpeed').value);
     c.requireInteraction = $('fInteract').checked;
@@ -543,10 +543,10 @@
   });
   $('sReload').addEventListener('click', function () { $('sNotice').textContent = '已放弃修改。'; });
   $('sReset').addEventListener('click', function () {
-    $('sIdentity').value = 'JOYCE MOORE'; $('sId').value = '0087';
+    $('sIdentity').value = 'ApexGP'; $('sId').value = '66';
     $('sLevel').value = '3'; $('sTheme').value = 'light';
     $('sSpeed').value = 1; $('sSpeedVal').textContent = '1.00×';
-    $('sInteract').checked = true; $('sSkip').checked = true; $('sSound').checked = false;
+    $('sInteract').checked = false; $('sSkip').checked = true; $('sSound').checked = false;
     $('sBrand1').value = 'DEEPSEEK'; $('sBrand2').value = 'SYNTHESIZE INTELLIGENCE';
     $('sBrand3a').value = 'HARNESS'; $('sBrand3b').value = 'OS';
     $('sOrgZh').value = '深度求索'; $('sOrgEn').value = 'DEEPSEEK';

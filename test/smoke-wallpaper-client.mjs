@@ -216,6 +216,13 @@ ok(css.includes('#dsh-cw-bg'), '底图选择器 #dsh-cw-bg 在位')
 ok(css.includes('pointer-events: none'), '底图不拦点击')
 ok(css.includes('#dsh-cw-bg > img'), '底图的 <img> 规则在位')
 ok(css.includes('object-fit: cover'), 'object-fit 生效')
+/* 2026-11-05：背景图不透明度（降低壁纸存在感，聊天文字更清楚） */
+const cssOpacity45 = mod.__buildCss({ ...base, __imageOk: true, imageOpacity: 45 })
+ok(cssOpacity45.includes('opacity: 0.45'), 'imageOpacity=45 → 底图 opacity 0.45', String((cssOpacity45.match(/opacity:[^;]+;/) || [])[0]))
+ok((cssOpacity45.match(/opacity: 0.45/g) || []).length === 1, '静态图规则只出现一次 opacity')
+ok(!/(^|\s)opacity:\s/.test(css), '未设置 imageOpacity 时不生成 opacity 规则（保持原图）')
+const cssOpacity0 = mod.__buildCss({ ...base, __imageOk: true, imageOpacity: 0 })
+ok(cssOpacity0.includes('opacity: 0;'), 'imageOpacity=0 → 只剩纱/底色')
 ok(css.includes('html.dsh-cw-light #dsh-cw-bg > .dsh-cw-veil { background: linear-gradient(rgba(253,250,254,.80), rgba(250,247,253,.68)); }'), '浅色主题压白纱')
 ok(css.includes('html.dsh-cw-dark #dsh-cw-bg > .dsh-cw-veil { background: linear-gradient(rgba(8,10,16,.74), rgba(6,8,14,.62)); }'), '深色主题压深纱')
 /* v2.13.11：镜头模糊只加在纱上（backdrop-filter 模糊纱后面的壁纸/视频，不动纱上面的文字） */
