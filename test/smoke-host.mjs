@@ -483,6 +483,11 @@ check('转义后仍是合法 JSON 且值可还原', (() => {
   try { return JSON.parse(payload).identity === '</script><img src=x onerror=alert(1)>' } catch { return false }
 })())
 
+console.log('\n[8] 自动更新地址指向 fork（2026-11-05 分发链接切换到 ApexGP/dsh-boot）')
+const hostStartupText = fs.readFileSync(path.join(PLUGIN_ROOT, 'lib/host-startup.js'), 'utf8')
+check('lib/host-startup.js 的 UPDATE_URL 指向 api.github.com/repos/ApexGP/dsh-boot/releases/latest',
+  /api\.github\.com\/repos\/ApexGP\/dsh-boot\/releases\/latest/.test(hostStartupText))
+
 fs.rmSync(SMOKE_HOME, { recursive: true, force: true })
 console.log('\n============================')
 console.log(`  通过 ${pass} / 失败 ${fail}`)

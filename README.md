@@ -6,7 +6,7 @@
 > 一个插件，两个互不牵连的半侧：动画坏了不影响壁纸，壁纸坏了不影响动画，界面照常进。
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](#安装)
-[![release](https://img.shields.io/github/v/release/LeeRolling/dsh-boot-suite?label=release)](https://github.com/LeeRolling/dsh-boot-suite/releases)
+[![release](https://img.shields.io/github/v/release/ApexGP/dsh-boot?label=release)](https://github.com/ApexGP/dsh-boot/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ![开机动画主画面](docs/hero.png)
@@ -39,7 +39,7 @@
 2. **一行在线安装**：
 
    ```sh
-   curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+   curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh
    ```
 
 3. **npm**：桌面端：设置 → 插件 → 添加插件，输入 `dsh-boot-suite`；普通 dsh web：`dsh plugin add dsh-boot-suite`。
@@ -51,7 +51,7 @@
 2. **一行在线安装**（PowerShell）：
 
    ```powershell
-   irm https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.ps1 | iex
+   irm https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.ps1 | iex
    ```
 
 3. **npm**：桌面端：设置 → 插件 → 添加插件，输入 `dsh-boot-suite`；普通 dsh web：`dsh plugin add dsh-boot-suite`。
@@ -91,6 +91,7 @@ npm test    # 14 套零依赖冒烟（含 macOS 专项），约 1000 项断言
 
 - 环境：Node ≥ 20。
 - 发布打包：`node tools/dev/build-release.mjs`（跨平台 zip，`DSH_RELEASE_OUT` 指定输出目录）
+- 发版：推 `tag v<版本>`（如 `git tag v2.16.11 && git push origin v2.16.11`）→ GitHub Actions（`.github/workflows/release.yml`）自动跑测试、打包四资产（`dsh-boot-suite-win.zip` / `dsh-boot-suite-win-V<版本>.zip` / `dsh-boot-suite.tgz` / `SHA256SUMS.txt`）并创建 Release；npm 发布默认关闭（仓库变量 `PUBLISH_NPM=true` + secret `NPM_TOKEN` 才发）。tag 与 `package.json` 版本不一致时 workflow 直接失败。
 - 动效回归：`node tools/dev/motion-check.mjs`；录屏用的逐帧导出：`node tools/dev/export-frames.mjs`
 - 目录：`lib/`（宿主半 + 浏览器半）、`templates/`（内置模板）、`preview/`（离线预览页）、`test/`（冒烟）、`tools/`（`tools/windows/`、`tools/macos/` 维护脚本，`tools/dev/` 开发工具）
 - 文档：[模板格式](docs/模板格式.md) · [引擎能力清单](docs/引擎能力清单.md) · [安装与排错](INSTALL.md) · [更新日志](CHANGELOG.md)
@@ -100,3 +101,5 @@ npm test    # 14 套零依赖冒烟（含 macOS 专项），约 1000 项断言
 MIT（只覆盖作者原创代码与文案）。视觉风格参考自动画作品；音频素材权利归原权利人，**未授权任何商业用途**。
 
 原作者：**沈宏宏**；合并、修复与维护：LeeRolling。参考作品与第三方素材清单见 [CREDITS.md](CREDITS.md)。
+
+本仓库是社区维护的 fork（[ApexGP/dsh-boot](https://github.com/ApexGP/dsh-boot)），上游仍是原作者 LeeRolling 维护的 dsh-boot-suite 仓库；原作者署名与素材授权保持不变。

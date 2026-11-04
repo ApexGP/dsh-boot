@@ -18,7 +18,7 @@
 #   sh install-online.sh --help
 #
 # 本脚本故意不 source tools/macos/lib/mac-common.sh：文档里推荐的一行命令是
-#   curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh
 # 管道方式下没有「脚本所在目录」，只能依赖系统自带命令（curl/ditto/unzip/find）。
 # ============================================================================
 set -u
@@ -31,7 +31,7 @@ IO_USAGE() {
   sh install-online.sh --help       # 显示本帮助
 
 也可以先不下载，直接一条命令（需要 curl）：
-  curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+  curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh
 
 环境变量（自动化测试用，正常安装不用设）：
   DSH_ONLINE_ZIP_URL       覆盖发布包下载地址
@@ -56,8 +56,8 @@ while [ $# -gt 0 ]; do
 done
 
 # 默认下载地址：latest 发布包（跨平台 zip）；失败回退到 main 分支源码包。
-IO_PRIMARY_URL=${DSH_ONLINE_ZIP_URL:-https://github.com/LeeRolling/dsh-boot-suite/releases/latest/download/dsh-boot-suite-win.zip}
-IO_FALLBACK_URL=${DSH_ONLINE_FALLBACK_URL:-https://github.com/LeeRolling/dsh-boot-suite/archive/refs/heads/main.zip}
+IO_PRIMARY_URL=${DSH_ONLINE_ZIP_URL:-https://github.com/ApexGP/dsh-boot/releases/latest/download/dsh-boot-suite-win.zip}
+IO_FALLBACK_URL=${DSH_ONLINE_FALLBACK_URL:-https://github.com/ApexGP/dsh-boot/archive/refs/heads/main.zip}
 
 # ── 2. 开场横幅 ─────────────────────────────────────────────────────────────
 IO_SAY ''
@@ -153,7 +153,7 @@ if [ -z "$IO_INSTALLER" ]; then
 fi
 if [ -z "$IO_INSTALLER" ]; then
   IO_ERR '压缩包里没找到 tools/macos/install.sh（可能下载不完整，或这个版本还没带 macOS 安装脚本）。'
-  IO_SAY '      请到 https://github.com/LeeRolling/dsh-boot-suite/releases 手动下载最新发布包。'
+  IO_SAY '      请到 https://github.com/ApexGP/dsh-boot/releases 手动下载最新发布包。'
   IO_SAY "      临时目录：$IO_TMP"
   exit 1
 fi

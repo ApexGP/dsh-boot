@@ -2,14 +2,14 @@
 <#
   dsh-boot-suite —— 在线一键安装（GitHub 直连，不用网盘）
   用法（PowerShell 里执行一行）：
-    irm https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.ps1 | iex
+    irm https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.ps1 | iex
     本地已下载时：powershell -NoProfile -ExecutionPolicy Bypass -File install-online.ps1 [-CheckOnly]
 #>
 [CmdletBinding()]
 param([switch]$CheckOnly)
 
 $ErrorActionPreference = 'Stop'
-$repo = 'LeeRolling/dsh-boot-suite'
+$repo = 'ApexGP/dsh-boot'
 $zipUrl = 'https://github.com/' + $repo + '/releases/latest/download/dsh-boot-suite-win.zip'
 $fallbackUrl = 'https://github.com/' + $repo + '/archive/refs/heads/main.zip'
 
@@ -52,7 +52,7 @@ if (-not $installPs1) {
 }
 if (-not $installPs1) {
   Write-Host '[x] 压缩包里没找到安装器（tools/windows/install.ps1 或 tools/install.ps1），可能下载不完整。' -ForegroundColor Red
-  Write-Host '    请到 https://github.com/LeeRolling/dsh-boot-suite/releases 下载最新版 zip 后重试。' -ForegroundColor Red
+  Write-Host '    请到 https://github.com/ApexGP/dsh-boot/releases 下载最新版 zip 后重试。' -ForegroundColor Red
   exit 1
 }
 

@@ -3,12 +3,13 @@
 - **新增 macOS 支持**：安装 / 卸载 / 回滚 / 诊断 / 自动更新全部补齐 POSIX sh 版本（`tools/macos/install.sh`、`uninstall.sh`、`rollback-version.sh`、`diagnose.sh`、`update-apply.sh`、`tools/macos/lib/mac-common.sh`、`tools/macos/lib/profile-json.mjs`），并在仓库根目录提供双击入口 `setup.command`。
 - **macOS 自动更新**：设置页「立即更新」在 macOS 上会打开 Terminal 运行 `tools/macos/update-apply.sh`，等 DSH 完全退出后替换版本并自动重开；支持 curl 下载兜底，失败会恢复旧版本目录与配置，日志写桌面「dsh-boot-suite 更新日志」。
 - **macOS 更新前回滚**：安装/更新前自动在桌面生成「紧急回滚-V<旧版本>（先完全退出 DSH 再双击）.command」，新版打不开时双击即可切回更新前的插件版本，不动用户设置。
-- **macOS 一键在线安装**：新增 `install-online.sh`（`curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh`）。
+- **macOS 一键在线安装**：新增 `install-online.sh`（`curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh`）。
 - **修复 macOS 上聊天壁纸「循环视频」找不到文件**：`lib/host-wallpaper.js` 之前把路径里的 `/` 转成 Windows 反斜杠再喂给 fs，macOS 上 `existsSync` 失败、还被判成「不在允许目录内」（17 项冒烟测试失败）；现在直接使用原始路径，Windows 行为不变。
 - **发布打包跨平台**：`tools/dev/build-release.mjs` 在 macOS 上用系统 `zip` / `unzip` 打包与校验（保留可执行位，并补 UTF-8 文件名标志位，保证 Windows 解压中文名不乱码），支持 `DSH_RELEASE_OUT` 指定输出目录；Windows 仍走 PowerShell Compress-Archive，行为不变。
 - **新增 macOS 专项冒烟测试** `test/smoke-macos.mjs`：文件清单、`sh -n` 语法、关键契约、profile-json 功能、`--check-only` 不写文件，已接入 `npm test`。
 - 跨平台工具：`tools/dev/motion-check.mjs` / `tools/dev/export-frames.mjs` 的 Chrome 默认路径按平台自动探测（macOS 用 `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`，仍可用 `CHROME_PATH` 覆盖）；`cordis.patch.yml` 注释补 macOS 安装示例。
 - **仓库整理**：脚本按平台分目录 —— Windows 运维脚本进 `tools/windows/`、macOS 进 `tools/macos/`、开发工具进 `tools/dev/`，根目录只保留 `setup.cmd` / `setup.command` / `install-online.ps1` / `install-online.sh` 四个入口；所有脚本文件名统一 ASCII kebab-case（中文只出现在脚本内容与输出里）；Windows 与 macOS 的多个双击入口合并为 `setup.cmd` / `setup.command` 一个中文菜单（安装/更新、卸载、诊断、打开离线预览）；删除 `open-preview.sh`、`rollback.cmd`、`卸载.cmd` 及旧的中文名双击入口等冗余脚本；保留 `tools/install.ps1` 兼容垫片（只转发 `tools/windows/install.ps1`），保证旧版自动更新不断链（下版删除）；`package.json` / 冒烟测试 / 文档 / `AGENTS.md` 全部对齐，双语 README 重写为同构结构。
+- **GitHub Actions 自动化**：新增 CI（`ubuntu-latest` / `windows-latest` / `macos-latest` 三平台跑 `npm test`，Windows 额外用 `System.Management.Automation.Language.Parser` 逐文件检查 `.ps1` 语法）与 tag 触发的自动发版（推送 tag `v<版本>` → 校验 tag 与 `package.json` 版本一致 → `npm test` → 打包 `dsh-boot-suite-win.zip` / `dsh-boot-suite-win-V<版本>.zip` / `dsh-boot-suite.tgz` / `SHA256SUMS.txt` 四资产 → 自动创建/更新 GitHub Release；npm 发布可选，由仓库变量 `PUBLISH_NPM` + secret `NPM_TOKEN` 控制，fork 默认不发布）。分发、自动更新与上架材料链接切到 fork `ApexGP/dsh-boot`（模板商店仍指原作者仓库 `LeeRolling/dsh-boot-suite-templates`），submission 市场登记改为 `ApexGP__dsh-boot.yml`。
 
 ## [2.16.10] — 2026-11-04
 

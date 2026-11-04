@@ -1,0 +1,69 @@
+# 三平台 CI：push main / PR / 手动触发都跑 npm test。
+# Windows 额外用 PowerShell 自带的 AST Parser 静态解析仓库内所有 .ps1（本机 mac 没有
+# PowerShell，语法错误只能靠这里拦）。不安装任何依赖：package.json 没有 dependencies。
+name: ci
+
+# 引号：YAML 1.1 解析器（如 ruby psych 2.6）会把裸 on 当成布尔 true；GitHub 两种都认。
+"on":
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: 测试（${{ matrix.os }}）
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: 运行冒烟测试（npm test）
+        run: npm test
+
+      # Windows 专用：用 PowerShell 自带的 Parser 做 AST 语法检查（只解析、不执行）。
+      # docs/ 不随发布包走，跳过；其余 .ps1 任何一个有语法错误都必须让 CI 红。
+      - name: 校验 PowerShell 语法（仅 Windows）
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = (Get-Location).Path
+          $files = @(Get-ChildItem -Path $root -Recurse -Filter '*.ps1' -File |
+            Where-Object { $_.FullName -notmatch '[\\/]docs[\\/]' })
+          if ($files.Count -eq 0) {
+            Write-Host '[x] 没找到任何 .ps1 文件，检查路径是否出错'
+            exit 1
+          }
+          $bad = @()
+          foreach ($f in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $bad += $f.FullName
+              Write-Host ('[x] ' + $f.FullName + ' 有 ' + $errors.Count + ' 处语法错误：')
+              foreach ($e in $errors) {
+                Write-Host ('      行 ' + $e.Extent.StartLineNumber + '：' + $e.Message)
+              }
+            } else {
+              Write-Host ('ok  ' + $f.FullName)
+            }
+          }
+          if ($bad.Count -gt 0) {
+            Write-Host ('[x] PowerShell 语法检查失败：' + $bad.Count + ' 个文件有问题')
+            exit 1
+          }
+          Write-Host ('PowerShell 语法检查通过：共 ' + $files.Count + ' 个 .ps1')

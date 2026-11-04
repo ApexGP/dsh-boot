@@ -20,7 +20,7 @@
 ### 方式 B：一行在线安装（PowerShell）
 
 ```powershell
-irm https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.ps1 | iex
+irm https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.ps1 | iex
 ```
 
 只看它要做什么、不动任何文件（本地已下载时）：
@@ -76,13 +76,13 @@ macOS 不需要 PowerShell、也不需要 Homebrew：安装 / 卸载 / 回滚 / 
 ### 方式 B：一行在线安装
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh
 ```
 
 下载的是同一个 Release 包；直连失败会自动回退到 GitHub 源码包。想先看它要做什么：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh -s -- --check-only
+curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh -s -- --check-only
 ```
 
 ### 方式 C：CLI（开发者 / 本仓库）

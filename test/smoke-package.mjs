@@ -329,3 +329,86 @@ for (const needle of ['--zip', '--version', 'unzip -t', 'pkg.new', 'pkg.old', 't
   if (!updateApplySh.includes(needle)) throw new Error('tools/macos/update-apply.sh 缺少关键逻辑：' + needle);
 }
 console.log('ok  package.json version=' + pkg.version + '，无 BOM；新布局文件齐全、脚本文件名全 ASCII、.ps1 带 BOM、.cmd 纯 ASCII、交叉引用正确（含 macOS 安装/更新/回滚/诊断链）');
+
+/* ============================================================================
+ * 2026-11-05 发布自动化：GitHub Actions 工作流 + 分发链接切到 fork
+ * ----------------------------------------------------------------------------
+ * 背景：仓库迁到 ApexGP/dsh-boot（fork），正式发布改由 tag 触发的 Actions 完成。
+ * 这一节把「工作流契约」和「全仓分发链接必须指向 fork」钉死，防止以后手改漏掉一处：
+ *   · 工作流文件按文本断言（不引 YAML 解析依赖），关键命令/权限/变量必须都在；
+ *   · 分发链接：产品 + 文档 + submission 必须含 ApexGP/dsh-boot，不得再出现
+ *     LeeRolling/dsh-boot-suite（模板商店仓库 LeeRolling/dsh-boot-suite-templates 豁免）；
+ *   · submission 市场登记文件按市场格式 <owner>__<repo>.yml 改名，旧文件必须不存在。
+ * ========================================================================== */
+const WORKFLOWS = ['.github/workflows/ci.yml', '.github/workflows/release.yml'];
+for (const f of WORKFLOWS) {
+  if (!fs.existsSync(path.join(root, f))) throw new Error('缺少 GitHub Actions 工作流：' + f);
+}
+const releaseYml = readText('.github/workflows/release.yml');
+for (const needle of ['tags:', 'workflow_dispatch', 'dsh-boot-suite-win-V', 'dsh-boot-suite.tgz', 'SHA256SUMS', 'npm test', 'gh release', 'contents: write', 'PUBLISH_NPM', 'NPM_TOKEN']) {
+  if (!releaseYml.includes(needle)) throw new Error('release.yml 缺少关键契约：' + needle);
+}
+const ciYml = readText('.github/workflows/ci.yml');
+for (const needle of ['ubuntu-latest', 'windows-latest', 'macos-latest', 'npm test', 'Language.Parser']) {
+  if (!ciYml.includes(needle)) throw new Error('ci.yml 缺少关键契约：' + needle);
+}
+
+/* 分发链接一致性：产品、文档、submission 上架材料全部指 fork ApexGP/dsh-boot。
+   模板商店是原作者维护的独立仓库（LeeRolling/dsh-boot-suite-templates），不跟着 fork 改。
+   用负向前瞻避免把 -templates 误判成旧仓库残留。 */
+const FORK_SLUG = 'ApexGP/dsh-boot';
+const OLD_SLUG = /LeeRolling\/dsh-boot-suite(?!-templates)/;
+const DIST_FILES = [
+  'lib/host-startup.js', 'install-online.ps1', 'install-online.sh', 'package.json',
+  'README.md', 'README.en.md', 'INSTALL.md', 'tools/README.md',
+  'submission/data/plugins/ApexGP__dsh-boot.yml', 'submission/data/community/dsh-boot-suite.json',
+  'submission/README.md', 'submission/上架申请正文.md',
+];
+for (const f of DIST_FILES) {
+  if (!fs.existsSync(path.join(root, f))) throw new Error('分发链接检查目标不存在：' + f);
+  const text = readText(f);
+  if (!text.includes(FORK_SLUG)) throw new Error(f + ' 未出现 fork 链接 ' + FORK_SLUG);
+  if (OLD_SLUG.test(text)) throw new Error(f + ' 仍残留旧仓库链接 LeeRolling/dsh-boot-suite（模板仓库 -templates 豁免）');
+}
+
+/* 自动更新地址必须指向 fork 的 GitHub API；旧版在线安装的两个下载源保留（Release 固定名 + 源码包兜底） */
+const hostStartupText = readText('lib/host-startup.js');
+if (!/api\.github\.com\/repos\/ApexGP\/dsh-boot\/releases\/latest/.test(hostStartupText)) {
+  throw new Error('lib/host-startup.js 的 UPDATE_URL 未指向 api.github.com/repos/ApexGP/dsh-boot/releases/latest');
+}
+const onlineSh = readText('install-online.sh');
+for (const needle of ['dsh-boot-suite-win.zip', 'archive/refs/heads/main.zip']) {
+  if (!onlineSh.includes(needle)) throw new Error('install-online.sh 缺少下载源：' + needle);
+}
+/* submission 市场登记：<owner>__<repo>.yml，repo 名是 dsh-boot；旧文件名必须已删除 */
+if (!fs.existsSync(path.join(root, 'submission/data/plugins/ApexGP__dsh-boot.yml'))) {
+  throw new Error('缺少市场登记文件 submission/data/plugins/ApexGP__dsh-boot.yml');
+}
+if (fs.existsSync(path.join(root, 'submission/data/plugins/LeeRolling__dsh-boot-suite.yml'))) {
+  throw new Error('旧市场登记文件 LeeRolling__dsh-boot-suite.yml 仍在（应 git mv 成 ApexGP__dsh-boot.yml）');
+}
+if (!readText('submission/data/plugins/ApexGP__dsh-boot.yml').includes('https://github.com/ApexGP/dsh-boot/releases/latest/download/dsh-boot-suite.tgz')) {
+  throw new Error('submission 市场登记的 tarball 未指向 fork 的 latest/download/dsh-boot-suite.tgz');
+}
+/* .github 只服务 CI/发版，不属于插件运行必需，package.json files 不要把它列进 npm 包 */
+if ((pkg.files || []).some((f) => String(f).replace(/^\.\//, '').startsWith('.github'))) {
+  throw new Error('package.json files 不应包含 .github（工作流不进 npm 包）');
+}
+/* submission 市场登记是严格 YAML：单引号标量里再出现单引号 ' 会被解析器当成字符串提前结束。
+   历史事故：description.en 里的 DSH's 让 ruby psych 报「line 5 column 3」直接解析失败。
+   这里不引 YAML 库，只扫 submission/data/plugins/*.yml 里「缩进键: '单引号值'」形式的行，
+   断言捕获内容里不含单引号——要写撇号就改成无撇号措辞（或按 YAML 规则用 '' 转义后另行评审）。 */
+const pluginDir = path.join(root, 'submission/data/plugins');
+const quoteOffenders = [];
+for (const name of fs.readdirSync(pluginDir).filter((n) => n.endsWith('.yml'))) {
+  const rel = 'submission/data/plugins/' + name;
+  readText(rel).split(/\r?\n/).forEach((line, i) => {
+    const m = line.match(/^\s+[A-Za-z0-9_-]+: '(.*)'\s*$/);
+    if (m && m[1].includes(String.fromCharCode(39))) quoteOffenders.push(rel + ':' + (i + 1));
+  });
+}
+if (quoteOffenders.length) {
+  throw new Error('submission 市场 YAML 的单引号标量里又出现了单引号（严格解析器会报错；历史事故：DSH\'s 让 ruby psych 报 line 5）。涉及行：' + quoteOffenders.join('、'));
+}
+console.log('ok  GitHub Actions 工作流契约齐全，产品/文档/submission 分发链接统一指向 fork ApexGP/dsh-boot');
+

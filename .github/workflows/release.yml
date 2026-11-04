@@ -1,0 +1,125 @@
+# 打 tag 自动发版：npm test → 打包 → 上传四资产到 GitHub Release。
+# 触发：push 一个 v* tag（推荐，例如 v2.16.11），或 Actions 页面手动 workflow_dispatch 填已存在的 tag。
+# 版本唯一来源是 package.json.version；tag 必须等于 v<version>，否则直接失败（防发错版本）。
+# 本机（macOS）无法真实触发 Actions，改完请在 GitHub 上手动 dispatch 跑一次真实校验。
+name: release
+
+# 引号：YAML 1.1 解析器（如 ruby psych 2.6）会把裸 on 当成布尔 true；GitHub 两种都认。
+"on":
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "要发版的 tag，必须等于 v<package.json 的 version>，例如 v2.16.11"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "release-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码（tag / 手动填写的 tag）
+        uses: actions/checkout@v4
+        with:
+          ref: "${{ inputs.tag || github.ref }}"
+          fetch-depth: 0
+
+      - name: 安装 Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          # npm 发布是可选步骤，需要 .npmrc 里的 registry 认证；不发布时也不影响其它步骤。
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 解析并校验版本（tag 必须等于 v<package.json.version>）
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION="$(node -p "require('./package.json').version")"
+          if [ "${TAG}" != "v${VERSION}" ]; then
+            echo "::error::tag 与 package.json 版本不一致：tag=${TAG}，package.json=v${VERSION}"
+            echo "::error::请先把 package.json 的 version 改成 tag 去掉 v 后的版本，再打 tag。"
+            exit 1
+          fi
+          echo "版本校验通过：tag=${TAG}，package.json=v${VERSION}"
+          echo "TAG=${TAG}" >> "${GITHUB_ENV}"
+          echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
+
+      - name: 运行冒烟测试（npm test）
+        run: npm test
+
+      - name: 打包 zip + tgz
+        env:
+          DSH_RELEASE_OUT: dist
+        run: node tools/dev/build-release.mjs
+
+      - name: 生成版本化资产 + SHA256SUMS.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          cp -f dsh-boot-suite-win.zip "dsh-boot-suite-win-V${VERSION}.zip"
+          sha256sum dsh-boot-suite-win.zip "dsh-boot-suite-win-V${VERSION}.zip" dsh-boot-suite.tgz > SHA256SUMS.txt
+          echo '== 四资产清单 =='
+          ls -lh dsh-boot-suite-win.zip "dsh-boot-suite-win-V${VERSION}.zip" dsh-boot-suite.tgz SHA256SUMS.txt
+          echo '== SHA256SUMS.txt =='
+          cat SHA256SUMS.txt
+
+      - name: 保存构建产物（Actions 页面可下载，手动 dispatch 时不用重跑）
+        uses: actions/upload-artifact@v4
+        with:
+          name: "dsh-boot-suite-v${{ env.VERSION }}"
+          path: dist/*
+
+      - name: 创建 / 更新 GitHub Release（四资产）
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd dist
+          ASSETS=(
+            "dsh-boot-suite-win.zip"
+            "dsh-boot-suite-win-V${VERSION}.zip"
+            "dsh-boot-suite.tgz"
+            "SHA256SUMS.txt"
+          )
+          for f in "${ASSETS[@]}"; do
+            if [ ! -f "${f}" ]; then
+              echo "::error::缺少发布资产：${f}"
+              exit 1
+            fi
+          done
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${TAG} 已存在，覆盖上传四资产（--clobber）"
+            gh release upload "${TAG}" "${ASSETS[@]}" --repo "${GITHUB_REPOSITORY}" --clobber
+          else
+            echo "创建 Release ${TAG}"
+            gh release create "${TAG}" "${ASSETS[@]}" --repo "${GITHUB_REPOSITORY}" --title "v${VERSION}" --generate-notes --verify-tag
+          fi
+
+      # npm 发布可选：仓库变量 PUBLISH_NPM=true 且 secrets.NPM_TOKEN 存在时才发。
+      # 注意：npm 包名 dsh-boot-suite 属于原作者账号；fork 默认不发布（变量不开即可），
+      # 只有拿到发包权限的维护者才应打开。
+      - name: 发布 npm（可选）
+        if: vars.PUBLISH_NPM == 'true'
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "未配置 secrets.NPM_TOKEN，跳过 npm publish。"
+            exit 0
+          fi
+          npm publish --access public

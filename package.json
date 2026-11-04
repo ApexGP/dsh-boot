@@ -64,10 +64,10 @@
   "author": "沈宏宏 · LeeRolling",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LeeRolling/dsh-boot-suite.git"
+    "url": "git+https://github.com/ApexGP/dsh-boot.git"
   },
-  "homepage": "https://github.com/LeeRolling/dsh-boot-suite#readme",
+  "homepage": "https://github.com/ApexGP/dsh-boot#readme",
   "bugs": {
-    "url": "https://github.com/LeeRolling/dsh-boot-suite/issues"
+    "url": "https://github.com/ApexGP/dsh-boot/issues"
   }
 }

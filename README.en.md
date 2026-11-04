@@ -6,7 +6,7 @@
 > One plugin, two independent halves: a broken animation never breaks the wallpaper, and vice versa — the UI always comes up.
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](#install)
-[![release](https://img.shields.io/github/v/release/LeeRolling/dsh-boot-suite?label=release)](https://github.com/LeeRolling/dsh-boot-suite/releases)
+[![release](https://img.shields.io/github/v/release/ApexGP/dsh-boot?label=release)](https://github.com/ApexGP/dsh-boot/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ![boot animation](docs/hero.png)
@@ -39,7 +39,7 @@
 2. **One-line online install**:
 
    ```sh
-   curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh | sh
+   curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh | sh
    ```
 
 3. **npm**: desktop — Settings → Plugins → Add plugin, enter `dsh-boot-suite`; plain dsh web — `dsh plugin add dsh-boot-suite`.
@@ -51,7 +51,7 @@
 2. **One-line online install** (PowerShell):
 
    ```powershell
-   irm https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.ps1 | iex
+   irm https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.ps1 | iex
    ```
 
 3. **npm**: desktop — Settings → Plugins → Add plugin, enter `dsh-boot-suite`; plain dsh web — `dsh plugin add dsh-boot-suite`.
@@ -91,6 +91,7 @@ npm test    # 14 dependency-free smoke suites (incl. a macOS one), ~1000 asserti
 
 - Requirements: Node ≥ 20.
 - Release build: `node tools/dev/build-release.mjs` (cross-platform zip; set `DSH_RELEASE_OUT` for the output dir)
+- Release: push `tag v<version>` (e.g. `git tag v2.16.11 && git push origin v2.16.11`) — GitHub Actions (`.github/workflows/release.yml`) runs the tests, builds four assets (`dsh-boot-suite-win.zip` / `dsh-boot-suite-win-V<version>.zip` / `dsh-boot-suite.tgz` / `SHA256SUMS.txt`) and creates the Release; npm publish is off by default (needs repo variable `PUBLISH_NPM=true` + secret `NPM_TOKEN`). The workflow fails if the tag does not match `package.json`'s version.
 - Motion regression: `node tools/dev/motion-check.mjs`; frame export for recordings: `node tools/dev/export-frames.mjs`
 - Layout: `lib/` (host + browser halves), `templates/` (bundled templates), `preview/` (offline preview), `test/` (smoke suites), `tools/` (`tools/windows/` and `tools/macos/` maintenance scripts, `tools/dev/` developer tools)
 - Docs: [template format](docs/模板格式.md) · [engine capabilities](docs/引擎能力清单.md) · [install & troubleshooting](INSTALL.md) · [changelog](CHANGELOG.md)
@@ -100,3 +101,5 @@ npm test    # 14 dependency-free smoke suites (incl. a macOS one), ~1000 asserti
 MIT for the original code and copy. Visual style references an anime; audio assets remain with their rights holders. **No commercial use is granted.**
 
 Original author: **沈宏宏**; merged, fixed and maintained by LeeRolling. Reference works and third-party assets: [CREDITS.md](CREDITS.md).
+
+This repository is a community-maintained fork ([ApexGP/dsh-boot](https://github.com/ApexGP/dsh-boot)); the upstream is the original author LeeRolling's dsh-boot-suite repository. Original authorship and asset credits are unchanged.

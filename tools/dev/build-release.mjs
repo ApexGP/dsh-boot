@@ -87,11 +87,13 @@ function makeZip() {
   }
   /* macOS / POSIX：系统 zip，在 stage 目录里用相对路径打包（解压出来不会多套一层目录）；
      不加 -X，保留 Unix 权限位，否则解压后的 .command / .sh 没有执行权限、双击没反应。 */
+  const zipLocale = process.platform === 'darwin' ? 'en_US.UTF-8' : 'C.UTF-8';
   execFileSync('zip', ['-r', '-q', out, '.'], {
     cwd: stage,
     stdio: 'inherit',
-    /* 显式给 UTF-8 locale：纯 C locale 的终端里 Info-ZIP 可能按本地字符集处理中文名 */
-    env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8' },
+    /* 显式给 UTF-8 locale：纯 C locale 的终端里 Info-ZIP 可能按本地字符集处理中文名。
+       macOS 系统自带 en_US.UTF-8；GitHub 的 ubuntu runner 通常只有 C.UTF-8。 */
+    env: { ...process.env, LANG: zipLocale, LC_ALL: zipLocale },
   });
   markZipUtf8(out);
 }

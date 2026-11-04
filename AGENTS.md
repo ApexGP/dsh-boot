@@ -1,15 +1,16 @@
 # AGENTS.md · 工作规范（每个会话开始先读这份）
 
 > 这份文件是给"下一个我"看的：上下文被压缩、或者换了会话，先读这里，别重新摸索。
-> 最后更新：2026-11-05 · 版本 2.16.11（新增 macOS 支持 + 仓库整理；未发版，npm 公共包仍为 2.16.10 之前）
+> 最后更新：2026-11-05 · 版本 2.16.11（新增 macOS 支持 + 仓库整理 + Actions 自动发版；未发版，npm 公共包仍为 2.16.10 之前）
 
 ## 一、项目坐标
 
 | 东西 | 路径 |
 |---|---|
 | 源码根目录 | `F:\Lee的GitHub仓库\DeepSeek harness 开机动画\01-源码` |
-| 仓库 | https://github.com/LeeRolling/dsh-boot-suite |
-| 模板商店数据源 | https://github.com/LeeRolling/dsh-boot-suite-templates |
+| 仓库（active origin） | https://github.com/ApexGP/dsh-boot （fork；日常提交与 Actions 发版都推这里） |
+| 原仓库（upstream） | https://github.com/LeeRolling/dsh-boot-suite （原作者维护，只读参考，不再 push） |
+| 模板商店数据源 | https://github.com/LeeRolling/dsh-boot-suite-templates （原作者维护的独立仓库，不跟着 fork 改） |
 | 备份目录 | `...\08-备份\known-good-<版本>-<说明>` |
 | 发布包 | `...\03-发布包\dsh-boot-suite.tgz` |
 | 参考 skill（本地） | `F:\Lee的GitHub仓库\_vendor\refactoring-ui-skill` |
@@ -19,6 +20,10 @@
 | macOS 桌面端 | `/Applications/DeepSeek Harness.app`（bundle id `com.deepseek.dsh`） |
 | macOS 自带 CLI | `…/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`（`/usr/local/bin/dsh` 是符号链接） |
 | 仓库目录约定（2026-11-05 整理后） | 根目录只留 `setup.cmd` / `setup.command` / `install-online.ps1` / `install-online.sh` 四个入口；Windows 运维脚本 `tools/windows/`、macOS `tools/macos/`（含 `lib/`）、开发工具 `tools/dev/`；脚本文件名一律 ASCII。`tools/install.ps1` 是过渡兼容垫片（只转发 `tools/windows/install.ps1`，下版删除） |
+
+> **fork 关系（2026-11-05）**：`ApexGP/dsh-boot` 是 `LeeRolling/dsh-boot-suite` 的 fork。
+> 日常提交、下载链接、自动更新都指向 fork；`author` 字段与 submission 的作者归属仍是原作者
+> （沈宏宏 / LeeRolling），不因 fork 改署名。模板商店继续指原作者仓库 `LeeRolling/dsh-boot-suite-templates`。
 
 ## 二、硬规则（违反过，代价很大）
 
@@ -32,7 +37,7 @@
 8. **.cmd 必须纯 ASCII**：UTF-8 无 BOM 的 .cmd 会被当 GBK 执行成乱码。**交付给用户的 .cmd/.ps1 必须由模板或生成器产出并读回校验**，禁止用「数组 + 字符串拼接」生成（2026-10-28 v2.13.9 事故：`+$v+` 被拆成独立数组元素，版本号单独成行，用户双击后 cmd 把 `2.13.9` 当命令、更新器未启动）。生成器：`node tools/dev/make-upgrade-helper.mjs <版本>`；交付前自己逐行读一遍。
 9. **PowerShell 5.1 读 UTF-8** 用 `[System.IO.File]::ReadAllText`，别用 `Get-Content`。
 10. **装/更新插件后禁止自动启动 DSH**：助手只负责安装，最后让用户手动打开；不要连续快速重启。若 DSH 报 `desktop welcome: Web authentication failed`，先备份 webstate/profile 再按官方恢复流程处理（2026-10-26 事故，详见交接文档第 2/7 节）。
-11. **每次 Release 必须同步发 npm**：GitHub Release 上传完三资产（两 zip + `dsh-boot-suite.tgz`）后，在仓库根目录跑 `npm publish`（账号 `leerolling`，令牌存 `~/.npmrc`，带 bypass 2FA、2027-01-26 到期），再用 `npm view dsh-boot-suite version` 核对版本；若出现 EOTP 浏览器确认，先 `npm login` 再重试，必要时临时重建发布助手。只发 Release 不发 npm 视为发版未完成。
+11. **发版只推 tag，让 GitHub Actions 干活**：改 `package.json` version（同步 `lib/client.js` 的 `FALLBACK_VERSION`）→ 提交 → `git tag v<version>` → `git push origin v<version>`。`.github/workflows/release.yml` 会自动跑 `npm test`、打包四资产（`dsh-boot-suite-win.zip` / `dsh-boot-suite-win-V<version>.zip` / `dsh-boot-suite.tgz` / `SHA256SUMS.txt`）并创建 Release；tag 与 package.json 版本不一致时 workflow 会直接失败。**本地不再手工 `gh release create` / 手工上传资产**（补发用 `workflow_dispatch`）。npm 发布是可选步骤：仓库变量 `PUBLISH_NPM=true` + secret `NPM_TOKEN` 才发；**fork 默认不发布 npm**（`dsh-boot-suite` 包名归原作者账号，原作者发版仍按原规则在本地 `npm publish` 并用 `npm view dsh-boot-suite version` 核对）。
 12. **跨窗口互通记忆必须带时间 + 窗口标题**：写入互通记忆/摘要时，第一行必须是 `YYYY年M月D日HH:mm（窗口：<窗口标题>）`，时间到分钟，然后另起一行写「记忆如下：」或「摘要如下：」；标题识别不到就写「窗口标题未知（待用户补）」，禁止省略或猜。示例：`2026年10月30日13:24（窗口：开机动画修复和维护）`。本窗口标题：`开机动画修复和维护`（可从 `~/.dsh/storages/session_projcache/sessions/*.json` 查到）。
 13. **macOS 的 shell 变量一律写 `${VAR}`**：macOS 的 /bin/sh 是 bash 3.2，`$name（中文` 会把中文首字节吞进变量名（表现为 unset 变量或中文乱码；2026-11-05 实测）。`test/smoke-macos.mjs` 有静态扫描，别让它变红。
 14. **mac 的 `setup.command` 双击入口必须满足**：POSIX sh（macOS 自带 /bin/sh，不依赖 bash 数组/Homebrew/PowerShell）、chmod 755、生成后写后读回校验；更新/回滚要在 Terminal 里可见进度，失败必须恢复旧版本目录与配置。
@@ -57,8 +62,9 @@ sh -n setup.command tools/macos/*.sh tools/macos/lib/mac-common.sh   # 语法
 npm run motion:check                       # 同上（Chrome 路径已跨平台）
 ```
 
-然后：`git add -A` → 提交（中文说明"为什么"）→ push → 如有发版：tag + `gh release create`（三资产含 tgz）→ `npm publish`（若弹浏览器确认就用桌面发布助手）→ 两处都复核版本。
-**push 完成要用 `git ls-remote` 核对远端**，网络经常 reset，命令"看起来成功"不算数。
+然后：`git add -A` → 提交（中文说明"为什么"）→ `git push`（推到 fork `ApexGP/dsh-boot`）。
+**发版（自动）**：改 `package.json` version（同步 `lib/client.js` 的 `FALLBACK_VERSION`）→ 提交 → `git tag v<version>` → `git push origin v<version>`。GitHub Actions 自动跑 `npm test`、打包四资产（`dsh-boot-suite-win.zip` / `dsh-boot-suite-win-V<version>.zip` / `dsh-boot-suite.tgz` / `SHA256SUMS.txt`）并创建 Release；漏发/补发用 `workflow_dispatch`（TAG 必须等于 `v`+version）。npm 发布默认关闭（fork 不发，包名归原作者）。
+**push / 发版后都要用 `git ls-remote` 核对远端**（tag 也算），网络经常 reset，命令"看起来成功"不算数；Release 出来后按第六节「发版验收」人工看一遍四资产与下载链接。
 
 ## 四、impeccable 的用法（2026-10-18 决定：只当发布前检查，不装 skill）
 
@@ -77,8 +83,11 @@ npx --yes impeccable@latest detect --json --no-config tools/editor.html preview/
 | DSH CLI | `C:\Users\Admin\AppData\Local\Programs\DeepSeek Harness\resources\runtime\cli\bin\dsh.cmd` |
 | pnpm | `...\resources\runtime\primary-runtime\dependencies\pnpm\bin\pnpm.cjs` |
 | Chrome（截图/验证） | `C:\Program Files\Google\Chrome\Application\chrome.exe` |
-| 打包 | `npm pack --pack-destination ..\03-发布包` 然后重命名成 `dsh-boot-suite.tgz` |
-| 发布 npm | 仓库根目录 `npm publish`（令牌带 bypass；若 EOTP 用桌面发布助手），发布后 `npm view dsh-boot-suite version` 核对 |
+| 本地试打包 | `DSH_RELEASE_OUT=<目录> node tools/dev/build-release.mjs`（正式发版由 Actions 自动做，不再手工上传） |
+| 发版（自动） | 改 version → 提交 → `git tag v<版本>` → `git push origin v<版本>`，Actions 自动测试/打包/建 Release |
+| 查看发版进度 | `gh run list --workflow=release.yml`；`gh release view v<版本>` |
+| 手工补发 | `gh workflow run release.yml -f tag=v<版本>`（workflow_dispatch；TAG 必须等于 v+package.json version） |
+| 发布 npm（仅原作者） | fork 默认不发（`dsh-boot-suite` 包名归原作者）；需发时在 Actions 配仓库变量 `PUBLISH_NPM=true` + secret `NPM_TOKEN`，原作者本地发仍按 `npm publish` + `npm view dsh-boot-suite version` 核对 |
 | 编辑器官网入口 | 设置 →「启动动画」→「打开模板编辑器」 |
 | 生成桌面升级助手 | `node tools/dev/make-upgrade-helper.mjs <版本>`（整段模板 + 写后读回校验） |
 | 生成紧急回滚助手 | 由 `tools/windows/install.ps1` 安装时自动生成（`tools/windows/rollback-version.ps1` + 桌面 bat），无需手工 |
@@ -91,7 +100,7 @@ macOS（v2.16.11 起）对应命令：
 | node 兜底（没有 node 命令时） | `ELECTRON_RUN_AS_NODE=1 "/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness" -e '...'` |
 | 安装 / 卸载 / 诊断 / 预览 | 仓库根目录双击 `setup.command`，菜单选 1 / 2 / 3 / 4 |
 | 只看安装计划 | `sh tools/macos/install.sh --check-only` |
-| 打包（跨平台） | `node tools/dev/build-release.mjs`（mac 用 zip/unzip；`DSH_RELEASE_OUT` 可指定输出目录） |
+| 打包（跨平台） | `node tools/dev/build-release.mjs`（mac 用 zip/unzip；`DSH_RELEASE_OUT` 可指定输出目录；正式发版由 Actions 在 ubuntu 上跑） |
 | 桌面端路径 | `/Applications/DeepSeek Harness.app`（bundle id `com.deepseek.dsh`） |
 | 重新打开桌面端 | `open -b com.deepseek.dsh`（失败再 `open -a "DeepSeek Harness"`） |
 | 进程检测 | `pgrep -f "DeepSeek Harness.app/Contents/"` |
@@ -125,6 +134,8 @@ macOS 脚本对照（Windows 能力全部有对应）：
   ```
   更新器同理：`DSH_UPDATE_WAIT_SECONDS=2` 缩短等待，`DSH_UPDATE_LOG_DIR="$TMP/Desktop"` 重定向日志；zip 用仓库现状打一个最小合法包。
 - **mac OS 版本号一致性**：改 `package.json` version 时，必须同步 `lib/client.js` 的 `FALLBACK_VERSION`（smoke-merge 会断言两者一致）
+- **Actions 本地预演**：`DSH_RELEASE_OUT=$(mktemp -d) node tools/dev/build-release.mjs` 能复现打包；工作流 YAML 用 `ruby -ryaml -e 'YAML.load_file(ARGV[0])' .github/workflows/release.yml`（或 `npx yaml`）至少确认可解析。
+- **发版验收（人工，Release 出来后）**：`gh run list --workflow=release.yml` 看绿；`gh release view v<版本> --json assets` 看四资产齐全；`SHA256SUMS.txt` 与实际资产 SHA256 一致；`latest/download/dsh-boot-suite.tgz`、`latest/download/dsh-boot-suite-win.zip` 能下载；tag 版本 == `package.json` version。
 
 ## 七、踩过的坑（重复率很高）
 
@@ -143,6 +154,9 @@ macOS 脚本对照（Windows 能力全部有对应）：
 | `$VAR（中文` | macOS bash 3.2 把中文首字节吞进变量名 → 变量变空、输出乱码；回滚按钮名缺版本号 | 全部写 `${VAR}`；`test/smoke-macos.mjs` 有静态扫描防复发 |
 | .command 双击没反应 | Finder 双击 .sh 不执行；下载来的脚本被 Gatekeeper 拦 | 入口用 `.command` 扩展名 + chmod 755 + 生成后读回校验；文档提示「右键 → 打开」 |
 | 目录重排断了旧版自动更新 | 旧版（≤2.16.10）更新器解压新 zip 后硬性检查并运行 `tools/install.ps1`，目录一搬就报「找不到安装器」，老用户无法升级 | 重排后首版保留 `tools/install.ps1` 兼容垫片（只转发 `tools/windows/install.ps1` + `@args`），`tools/dev/build-release.mjs` 必需清单与 `test/smoke-package.mjs` 都钉住它；下版删除 |
+| tag 与版本号不一致 | release workflow 的 Resolve 步骤直接失败（中文报错），不会发版 | 打 tag 前先改 `package.json` version 并同步 `lib/client.js` 的 `FALLBACK_VERSION`；tag 必须是 `v`+version |
+| 手工 `gh release` 发版 | 绕过 Actions 的测试与 SHA256SUMS 校验，资产可能残缺/漏传 | 只推 tag 让 workflow 建 Release；补发用 `workflow_dispatch` |
+| fork 直接 npm publish | 包名 `dsh-boot-suite` 归原作者账号，fork 无发布权（会 E403/EOTP） | 默认不发布（`PUBLISH_NPM` 不设）；要发公网 npm 只能用原作者凭据，或改用新包名 |
 
 ## 八、文档索引（压缩后按需读）
 

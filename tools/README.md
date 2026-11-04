@@ -12,8 +12,8 @@
 |---|---|---|
 | `setup.cmd` | Windows | 双击入口：中文菜单（1 安装/更新、2 卸载、3 诊断、4 打开离线预览、0 退出）。纯 ASCII 薄壳，逻辑在 `tools/windows/setup.ps1` |
 | `setup.command` | macOS | 双击入口：Finder 双击在 Terminal 打开同一个中文菜单。逻辑在 `tools/macos/setup.sh` |
-| `install-online.ps1` | Windows | 在线安装：`irm https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.ps1 \| iex` |
-| `install-online.sh` | macOS | 在线安装：`curl -fsSL https://raw.githubusercontent.com/LeeRolling/dsh-boot-suite/main/install-online.sh \| sh` |
+| `install-online.ps1` | Windows | 在线安装：`irm https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.ps1 \| iex` |
+| `install-online.sh` | macOS | 在线安装：`curl -fsSL https://raw.githubusercontent.com/ApexGP/dsh-boot/main/install-online.sh \| sh` |
 
 ## 二、Windows（`tools/windows/`）
 
