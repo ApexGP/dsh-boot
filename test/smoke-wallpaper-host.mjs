@@ -176,7 +176,7 @@ try {
   check('/config 的 image 指向内置默认图', r.json && typeof r.json.image === 'string' && r.json.image.endsWith('lib/assets/default-background.jpg'), r.json && r.json.image)
   check('/config 的 imageSource = builtin', r.json && r.json.imageSource === 'builtin', String(r.json && r.json.imageSource))
   check('★ v2.13.4 config.imageFit 默认 cover', r.json && r.json.config && r.json.config.imageFit === 'cover', String(r.json && r.json.config && r.json.config.imageFit))
-  check('★ 默认开启磨砂：config.veilBlur = 30', r.json && r.json.config && r.json.config.veilBlur === 30, String(r.json && r.json.config && r.json.config.veilBlur))
+  check('★ 默认开启轻度磨砂：config.veilBlur = 15', r.json && r.json.config && r.json.config.veilBlur === 15, String(r.json && r.json.config && r.json.config.veilBlur))
   check('★ 默认背景图不透明度 = 60（降低壁纸存在感，保证聊天可读性）', r.json && r.json.config && r.json.config.imageOpacity === 60, String(r.json && r.json.config && r.json.config.imageOpacity))
   check('★ v2.13.17 config.colorMode 默认 color', r.json && r.json.config && r.json.config.colorMode === 'color', String(r.json && r.json.config && r.json.config.colorMode))
   const v0 = (r.json && r.json.video) || {}

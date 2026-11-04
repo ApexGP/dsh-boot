@@ -285,5 +285,29 @@ console.log('\n=== 离线预览回归：没有注入模板（TEMPLATE=null）也
     !!(rv.windowStub.__DSH_STARTUP_API__ && typeof rv.windowStub.__DSH_STARTUP_API__.replay === 'function'))
 }
 
+/* ═══ 自动播放节拍（2026-11-05）：requireInteraction=false 时每幕额外停留 1.5s ═══
+ * 默认关闭人工确认后，整段靠 step.hold 定节奏；原来 0.7–1.6s 太快，看起来一闪而过。
+ * 这里用假定时器把等待时长抓出来断言（speed=1、默认内置幕 hold=900）。 */
+console.log('\n=== 自动播放节拍：每幕额外停留 1.5s ===')
+{
+  /* 单幕模板 + action=auto：绕开「授权/确认」的等待用户分支，直接考察 hold */
+  const paceTpl = { id: 'pace', steps: [{ zh: '节拍', en: 'PACE', action: 'auto', hold: 900 }] }
+  const collect = async (page, target, rounds) => {
+    const seen = []
+    for (let i = 0; i < rounds; i++) {
+      const batch = page.timers.splice(0)
+      for (const t of batch) { seen.push(t.ms); try { t.fn() } catch (e) {} }
+      await flush()
+      if (seen.includes(target)) break
+    }
+    return seen
+  }
+  const autoSeen = await collect(boot({ sound: false, voice: false, requireInteraction: false, allowSkip: true, speed: 1 }, paceTpl), 2400, 40)
+  check('★ 自动播放单幕等待 = hold 900 + 额外 1500 = 2400ms', autoSeen.includes(2400), JSON.stringify(autoSeen.slice(0, 18)))
+
+  const manualSeen = await collect(boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 1 }, paceTpl), 900, 40)
+  check('手动确认模式不额外加时（单幕仍是 900ms）', manualSeen.includes(900) && !manualSeen.includes(2400), JSON.stringify(manualSeen.slice(0, 18)))
+}
+
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)
 process.exit(fail === 0 ? 0 : 1)
