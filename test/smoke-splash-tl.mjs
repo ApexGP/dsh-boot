@@ -307,6 +307,17 @@ console.log('\n=== 自动播放节拍：每幕额外停留 1.5s ===')
 
   const manualSeen = await collect(boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 1 }, paceTpl), 900, 40)
   check('手动确认模式不额外加时（单幕仍是 900ms）', manualSeen.includes(900) && !manualSeen.includes(2400), JSON.stringify(manualSeen.slice(0, 18)))
+
+  /* 身份核验幕（confirm）：自动播放时档案卡不能 520ms 就被收走——
+     台词念完后还要停「普通 1500 + 身份专属 1500」，再收卡片。 */
+  const idTpl = {
+    id: 'id-pace',
+    steps: [{ zh: '身份资料确认', en: 'IDENTITY VERIFICATION', badge: 'IDENTITY', action: 'confirm', say: 'Identity verification.', audio: 'line-2', hold: 700 }],
+  }
+  const idAuto = await collect(boot({ sound: false, voice: false, requireInteraction: false, allowSkip: true, speed: 1 }, idTpl), 3000, 40)
+  check('★ 自动播放身份核验幕：档案卡停留 = 普通 1500 + 身份 1500 = 3000ms', idAuto.includes(3000), JSON.stringify(idAuto.slice(0, 18)))
+  const idManual = await collect(boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 1 }, idTpl), 520, 12)
+  check('手动确认模式身份幕不额外加时（没有 3000ms 等待）', !idManual.includes(3000), JSON.stringify(idManual.slice(0, 12)))
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)

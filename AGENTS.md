@@ -1,7 +1,7 @@
 # AGENTS.md · 工作规范（每个会话开始先读这份）
 
 > 这份文件是给"下一个我"看的：上下文被压缩、或者换了会话，先读这里，别重新摸索。
-> 最后更新：2026-11-05 · 版本 2.16.12（macOS 支持 + 仓库整理 + Actions 自动发版 + DSH-Store 上架整改；未发版，npm 公共包仍为 2.16.10 之前）
+> 最后更新：2026-11-05 · 版本 2.16.13（macOS 支持 + 仓库整理 + Actions 自动发版 + DSH-Store 上架整改 + 身份核验幕加时；2.16.12 已发版）
 
 ## 一、项目坐标
 
@@ -162,6 +162,7 @@ macOS 脚本对照（Windows 能力全部有对应）：
 | .command 双击没反应 | Finder 双击 .sh 不执行；下载来的脚本被 Gatekeeper 拦 | 入口用 `.command` 扩展名 + chmod 755 + 生成后读回校验；文档提示「右键 → 打开」 |
 | 离线预览页「没反应」 | preview/index.html 不注入 `__DSH_STARTUP_TEMPLATE__`，splash.js 的 waitTimer 无脑读 `TEMPLATE.gates` 抛 TypeError，被兜底当成「动画异常」瞬间揭幕 → 看不到动画、重播无效 | `TEMPLATE` 访问一律先判空；`test/smoke-splash-tl.mjs` 有「无模板场景不许直接揭幕」回归（假定时器测不到，必须在会 pump 定时器的 tl 测试里做） |
 | 目录重排断了旧版自动更新 | 旧版（≤2.16.10）更新器解压新 zip 后硬性检查并运行 `tools/install.ps1`，目录一搬就报「找不到安装器」，老用户无法升级 | 重排后首版保留 `tools/install.ps1` 兼容垫片（只转发 `tools/windows/install.ps1` + `@args`），`tools/dev/build-release.mjs` 必需清单与 `test/smoke-package.mjs` 都钉住它；下版删除 |
+| 自动播放收档案卡太早 | 身份核验幕的 `hideAction()` 在 520ms 就执行，档案卡（身份名称/编号/等级）一闪而过，看不清 | 自动播放分支把收起动作挪到「台词念完 + AUTO_HOLD_EXTRA + AUTO_IDENTITY_EXTRA」之后（身份幕额外 +1.5s）；`smoke-splash-tl` 断言 3000ms 停留 |
 | tag 与版本号不一致 | release workflow 的 Resolve 步骤直接失败（中文报错），不会发版 | 打 tag 前先改 `package.json` version 并同步 `lib/client.js` 的 `FALLBACK_VERSION`；tag 必须是 `v`+version |
 | 手工 `gh release` 发版 | 绕过 Actions 的测试与 SHA256SUMS 校验，资产可能残缺/漏传 | 只推 tag 让 workflow 建 Release；补发用 `workflow_dispatch` |
 | fork 直接 npm publish | 包名 `dsh-boot-suite` 归原作者账号，fork 无发布权（会 E403/EOTP） | 默认不发布（`PUBLISH_NPM` 不设）；要发公网 npm 只能用原作者凭据，或改用新包名 |
