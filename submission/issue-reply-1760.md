@@ -1,7 +1,7 @@
 <!-- 用法：把下面整段贴到 #1760 的评论里；把 <COMMIT_SHA> 换成你 push 后 git rev-parse HEAD 的 40 位哈希。
-     顺带在 Issue 正文里任意编辑一处（比如加一行「已更新到 v2.16.13」）也会触发预检重跑。 -->
+     顺带在 Issue 正文里任意编辑一处（比如加一行「已更新到 v2.16.14」）也会触发预检重跑。 -->
 
-## 已按政策完成可整改项，请求人工准入复核（v2.16.13 / `<COMMIT_SHA>`）
+## 已按政策完成可整改项，请求人工准入复核（v2.16.14 / `<COMMIT_SHA>`）
 
 感谢自动预检。作者侧能改的已全部改完：
 
@@ -10,7 +10,7 @@
    - 保留：`lib/`、`templates/`、`tools/macos/`、`tools/windows/`、`tools/editor.html`、`cordis.patch.yml`、文档与 LICENSE。
    - 用 DSH-Store 仓库同版本的 `src/` 扫描模块本地复现：bounded 运行时源码 **96 → 70** 个文件，安全告警 **9 → 2**；无超限文件、无预算超限、无生命周期脚本、无运行依赖。
 2. **移除 Windows 更新器的 `shell: true`**（改为 `cmd.exe /c` 固定参数），`shell-mode` 告警消失。
-3. 版本升至 **v2.16.13**，包含上架整改、默认配置调整与身份核验幕加时；构建/测试 `npm test` 全绿。
+3. 版本升至 **v2.16.14**，包含上架整改、默认配置调整与自动播放节奏调整；构建/测试 `npm test` 全绿。
 
 自动预检仍为 `SUBMISSION_SCAN_INCOMPLETE`，剩余原因全部属于 bounded-source 扫描器的能力边界，不是可删除的功能：
 

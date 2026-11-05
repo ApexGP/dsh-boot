@@ -285,10 +285,10 @@ console.log('\n=== 离线预览回归：没有注入模板（TEMPLATE=null）也
     !!(rv.windowStub.__DSH_STARTUP_API__ && typeof rv.windowStub.__DSH_STARTUP_API__.replay === 'function'))
 }
 
-/* ═══ 自动播放节拍（2026-11-05）：requireInteraction=false 时每幕额外停留 1.5s ═══
- * 默认关闭人工确认后，整段靠 step.hold 定节奏；原来 0.7–1.6s 太快，看起来一闪而过。
- * 这里用假定时器把等待时长抓出来断言（speed=1、默认内置幕 hold=900）。 */
-console.log('\n=== 自动播放节拍：每幕额外停留 1.5s ===')
+/* ═══ 自动播放节拍（2026-11-05）：requireInteraction=false 时每幕额外停留 0.5s ═══
+ * 默认关闭人工确认后，整段靠 step.hold 定节奏；原 hold 0.7–1.6s 太快，先加 1.5s 偏闷，
+ * 最终定为 0.5s（身份核验幕另加 1.5s）。这里用假定时器把等待时长抓出来断言。 */
+console.log('\n=== 自动播放节拍：普通每幕额外 0.5s、身份幕合计 2.0s ===')
 {
   /* 单幕模板 + action=auto：绕开「授权/确认」的等待用户分支，直接考察 hold */
   const paceTpl = { id: 'pace', steps: [{ zh: '节拍', en: 'PACE', action: 'auto', hold: 900 }] }
@@ -302,22 +302,22 @@ console.log('\n=== 自动播放节拍：每幕额外停留 1.5s ===')
     }
     return seen
   }
-  const autoSeen = await collect(boot({ sound: false, voice: false, requireInteraction: false, allowSkip: true, speed: 1 }, paceTpl), 2400, 40)
-  check('★ 自动播放单幕等待 = hold 900 + 额外 1500 = 2400ms', autoSeen.includes(2400), JSON.stringify(autoSeen.slice(0, 18)))
+  const autoSeen = await collect(boot({ sound: false, voice: false, requireInteraction: false, allowSkip: true, speed: 1 }, paceTpl), 1400, 40)
+  check('★ 自动播放单幕等待 = hold 900 + 额外 500 = 1400ms', autoSeen.includes(1400), JSON.stringify(autoSeen.slice(0, 18)))
 
   const manualSeen = await collect(boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 1 }, paceTpl), 900, 40)
-  check('手动确认模式不额外加时（单幕仍是 900ms）', manualSeen.includes(900) && !manualSeen.includes(2400), JSON.stringify(manualSeen.slice(0, 18)))
+  check('手动确认模式不额外加时（单幕仍是 900ms）', manualSeen.includes(900) && !manualSeen.includes(1400), JSON.stringify(manualSeen.slice(0, 18)))
 
   /* 身份核验幕（confirm）：自动播放时档案卡不能 520ms 就被收走——
-     台词念完后还要停「普通 1500 + 身份专属 1500」，再收卡片。 */
+     台词念完后还要停「普通 500 + 身份专属 1500」，再收卡片。 */
   const idTpl = {
     id: 'id-pace',
     steps: [{ zh: '身份资料确认', en: 'IDENTITY VERIFICATION', badge: 'IDENTITY', action: 'confirm', say: 'Identity verification.', audio: 'line-2', hold: 700 }],
   }
-  const idAuto = await collect(boot({ sound: false, voice: false, requireInteraction: false, allowSkip: true, speed: 1 }, idTpl), 3000, 40)
-  check('★ 自动播放身份核验幕：档案卡停留 = 普通 1500 + 身份 1500 = 3000ms', idAuto.includes(3000), JSON.stringify(idAuto.slice(0, 18)))
+  const idAuto = await collect(boot({ sound: false, voice: false, requireInteraction: false, allowSkip: true, speed: 1 }, idTpl), 2000, 40)
+  check('★ 自动播放身份核验幕：档案卡停留 = 普通 500 + 身份 1500 = 2000ms', idAuto.includes(2000), JSON.stringify(idAuto.slice(0, 18)))
   const idManual = await collect(boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 1 }, idTpl), 520, 12)
-  check('手动确认模式身份幕不额外加时（没有 3000ms 等待）', !idManual.includes(3000), JSON.stringify(idManual.slice(0, 12)))
+  check('手动确认模式身份幕不额外加时（没有 2000ms 等待）', !idManual.includes(2000), JSON.stringify(idManual.slice(0, 12)))
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)
