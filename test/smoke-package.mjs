@@ -291,20 +291,14 @@ if (!MAC_INSTALL.test(readText('tools/macos/rollback-version.sh'))) throw new Er
 if (!MAC_INSTALL.test(readText('install-online.sh'))) throw new Error('install-online.sh 未引用 tools/macos/install.sh');
 if (!/tools\/macos\/setup\.sh/.test(readText('setup.command'))) throw new Error('setup.command 未调用 tools/macos/setup.sh');
 
-/* 兼容垫片（下版删除）：旧版（≤2.16.10）自动更新器解压新 zip 后，会硬性检查并运行
-   tools/install.ps1。目录重排后必须保留这个只做转发的垫片，否则老用户升级直接断链。
-   注意：这是「新布局的兼容层」，不是旧路径残留，不要按残留删掉。 */
-if (!fs.existsSync(path.join(root, 'tools/install.ps1'))) {
-  throw new Error('缺少兼容垫片 tools/install.ps1（旧版 ≤2.16.10 的自动更新会断链）');
+/* 兼容垫片已在 v2.16.15 删除：v2.16.11 目录重排时新增的 tools/install.ps1 只负责把旧路径
+   转发到 tools/windows/install.ps1，新布局稳定后不再维护。旧版（≤2.16.10）更新器硬编码该路径，
+   直接升级到 ≥2.16.15 会失败（走在线安装器或先升中间版本），别再把它加回发布包。 */
+if (fs.existsSync(path.join(root, 'tools/install.ps1'))) {
+  throw new Error('tools/install.ps1 兼容垫片已在 v2.16.15 删除，不应再出现在仓库/发布包');
 }
-const compatShim = readText('tools/install.ps1');
-if (!WIN_INSTALL.test(compatShim)) throw new Error('tools/install.ps1 兼容垫片未转发到 tools/windows/install.ps1');
-if (!/@args|@PSBoundParameters|\$args\b/i.test(compatShim)) {
-  throw new Error('tools/install.ps1 兼容垫片缺少参数转发（@args / $args / @PSBoundParameters）');
-}
-/* 打包必需清单必须带垫片：旧版更新器只看 zip 里有没有 tools/install.ps1 */
-if (!/['"]tools\/install\.ps1['"]/.test(readText('tools/dev/build-release.mjs'))) {
-  throw new Error('build-release.mjs 的 REQUIRED_FILES 缺少兼容垫片 tools/install.ps1');
+if (/['"]tools\/install\.ps1['"]/.test(readText('tools/dev/build-release.mjs'))) {
+  throw new Error('build-release.mjs 的 REQUIRED_FILES 不应再包含已删除的兼容垫片');
 }
 
 /* 回滚脚本要能回退旧布局：目录重排前装的版本只有 tools/install.ps1 / tools/install-macos.sh。

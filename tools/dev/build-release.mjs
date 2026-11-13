@@ -39,9 +39,9 @@ const REQUIRED_FILES = [
   'lib/index.js', 'lib/splash.js', 'lib/client.js', 'lib/assets/default-background.jpg', 'templates',
   /* 根目录只留四个入口脚本：setup.cmd / setup.command / install-online.ps1 / install-online.sh */
   'setup.cmd', 'setup.command', 'install-online.ps1', 'install-online.sh',
-  /* 兼容垫片（下版删除）：旧版（≤2.16.10）自动更新器解压新 zip 后会硬性检查并运行
-     tools/install.ps1，目录重排后必须保留这个只做转发的垫片，否则老用户升级直接断链。 */
-  'tools/install.ps1',
+  /* v2.16.15：过渡兼容垫片 tools/install.ps1 已删除。旧版（≤2.16.10）的更新器硬编码了
+     这个路径，直接升级到 ≥2.16.15 会在检查阶段失败；老用户走 install-online.* 或先升到
+     2.16.11–2.16.14。新布局更新器只认 tools/windows/install.ps1，不受影响。 */
   /* Windows：菜单 + 安装 / 更新 / 回滚 / 卸载 / 诊断，全在 tools/windows/ 下 */
   'tools/windows/setup.ps1', 'tools/windows/install.ps1', 'tools/windows/update-apply.ps1',
   'tools/windows/rollback-version.ps1', 'tools/windows/uninstall.ps1', 'tools/windows/diagnose.ps1',
