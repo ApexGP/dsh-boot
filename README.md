@@ -1,17 +1,18 @@
 # dsh-boot
 
+<div align="center">
+
 [简体中文](README.md) | [English](README.en.md)
 
-> **DeepSeek Harness 开机套件** —— 冷启动的开机动画，加上进入聊天后的那张壁纸。
-> 一个插件，两个互不牵连的半侧：动画坏了不影响壁纸，壁纸坏了不影响动画，界面照常进。
+**DeepSeek Harness 开机套件** —— 冷启动的开机动画，加上进入聊天后的那张壁纸。一个插件，两个互不牵连的半侧：动画坏了不影响壁纸，壁纸坏了不影响动画，界面照常进。
 
 [![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](#安装)
 [![release](https://img.shields.io/github/v/release/ApexGP/dsh-boot?label=release)](https://github.com/ApexGP/dsh-boot/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-![开机动画主画面](docs/hero.png)
-
 ![启动过程演示](docs/demo.gif)
+
+</div>
 
 > GIF 是由 `preview/demo.html` 逐帧录制的 5 秒循环（无声）；真实播放带真声台词与界面音效。
 
