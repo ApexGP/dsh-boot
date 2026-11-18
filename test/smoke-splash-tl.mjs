@@ -148,6 +148,7 @@ function boot(cfgOverride, template, warnSink) {
   }
 
   const timers = []
+  const intervals = []
   const windowStub = {
     __DSH_STARTUP__: Object.assign({
       enabled: true, mode: 'always', theme: 'light', speed: 1,
@@ -182,8 +183,15 @@ function boot(cfgOverride, template, warnSink) {
       return timers.length
     },
     clearTimeout() {},
-    setInterval: () => 1,
-    clearInterval() {},
+    /* setInterval 也做成可控：无进度保护/后台兜底靠它触发，测试可以手动调用 */
+    setInterval: (fn, ms) => {
+      intervals.push({ fn, ms })
+      return intervals.length
+    },
+    clearInterval(id) {
+      const i = Number(id) - 1
+      if (i >= 0 && i < intervals.length) intervals[i] = null
+    },
     CustomEvent: function (t) { this.type = t },
   }
   windowStub.window = windowStub
@@ -220,7 +228,7 @@ function boot(cfgOverride, template, warnSink) {
     vm.runInContext(fs.readFileSync(BUNDLE, 'utf8'), sandbox, { filename: 'splash.js' })
   } catch (e) { thrown = e }
   return {
-    windowStub, root, body, rafQueue, timers, thrown, documentStub, fireDoc,
+    windowStub, root, body, rafQueue, timers, intervals, thrown, documentStub, fireDoc,
     advance: (ms) => { fakeNow += ms },
     now: () => fakeNow,
   }
@@ -378,6 +386,27 @@ console.log('\n=== macOS 标题栏热区 + 后台播放策略（v2.16.16）===')
   const bgState = pg2.windowStub.__DSH_TRANSITION_STATE__ || {}
   check('后台时长计入播放头：回前台后时间线直接走完并进入片尾转场',
     bgState.lastType === 'flash', JSON.stringify({ lastType: bgState.lastType, overlays: bgState.overlays }))
+
+  /* 后台冻结兜底：后台 ≥30s 还没播完，回前台直接收尾进 chat（不能定格最后一幕） */
+  const pg3 = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
+  await flush()
+  pg3.documentStub.hidden = true
+  pg3.fireDoc('visibilitychange')
+  pg3.advance(31000)
+  pg3.documentStub.hidden = false
+  pg3.fireDoc('visibilitychange')
+  await flush()
+  check('后台冻结 ≥30s → 回前台直接收尾进 chat（root 进入 dsu-gone）', /dsu-gone/.test(pg3.root._cls), pg3.root._cls)
+
+  /* 无进度保护：45s 没有任何进展 → 强制揭幕（覆盖定格在最后一幕的极端情况） */
+  const pg4 = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
+  await flush()
+  pg4.advance(46000)
+  const stallTick = pg4.intervals.find((x) => x && x.ms === 5000)
+  check('已注册无进度保护定时器（5s 检查）', !!stallTick, JSON.stringify(pg4.intervals.map((x) => x && x.ms)))
+  if (stallTick) { try { stallTick.fn() } catch (e) { /* 兜底异常不影响断言 */ } }
+  await flush()
+  check('45s 无进度 → 强制揭幕进 chat（root 进入 dsu-gone）', /dsu-gone/.test(pg4.root._cls), pg4.root._cls)
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)

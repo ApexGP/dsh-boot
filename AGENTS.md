@@ -1,7 +1,7 @@
 # AGENTS.md · 工作规范（每个会话开始先读这份）
 
 > 这份文件是给"下一个我"看的：上下文被压缩、或者换了会话，先读这里，别重新摸索。
-> 最后更新：2026-11-18 · 版本 2.16.16（修 macOS 启动动画挡标题栏拖拽/双击最大化 + 后台运行时动画冻结；2.16.15 已发版）
+> 最后更新：2026-11-18 · 版本 2.16.17（mac 标题栏拖拽 + 启动动画后台播完/兜底进 chat；2.16.16 已发版）
 
 ## 一、项目坐标
 
@@ -162,8 +162,8 @@ macOS 脚本对照（Windows 能力全部有对应）：
 | .command 双击没反应 | Finder 双击 .sh 不执行；下载来的脚本被 Gatekeeper 拦 | 入口用 `.command` 扩展名 + chmod 755 + 生成后读回校验；文档提示「右键 → 打开」 |
 | 离线预览页「没反应」 | preview/index.html 不注入 `__DSH_STARTUP_TEMPLATE__`，splash.js 的 waitTimer 无脑读 `TEMPLATE.gates` 抛 TypeError，被兜底当成「动画异常」瞬间揭幕 → 看不到动画、重播无效 | `TEMPLATE` 访问一律先判空；`test/smoke-splash-tl.mjs` 有「无模板场景不许直接揭幕」回归（假定时器测不到，必须在会 pump 定时器的 tl 测试里做） |
 | 目录重排断了旧版自动更新 | 旧版（≤2.16.10）更新器解压新 zip 后硬性检查并运行 `tools/install.ps1`，目录一搬就报「找不到安装器」 | v2.16.11 曾加过渡垫片转发到 `tools/windows/install.ps1`；**v2.16.15 已按计划删除垫片**：≤2.16.10 用户直接用旧更新器升到 ≥2.16.15 会在检查阶段失败，需走 `install-online.ps1` 或先升到 2.16.11–2.16.14。`tools/windows/rollback-version.ps1` 仍保留旧布局回退分支（回滚到老版本时调用旧包自带的 `tools/install.ps1`） |
-| 启动动画挡住 mac 标题栏 | 动画期间不能拖动窗口、双击标题栏不能最大化：root 是全屏 fixed 覆盖层，盖住了桌面端标题栏的 `-webkit-app-region: drag` 区域 | 在 root 顶部挂透明 `.dsu-dragbar`（JS 量真实 drag 区高度、应用外壳晚挂载时补测两次、兜底 38px，仅 macOS；随 root 移除）。`smoke-splash-tl` 断言热区存在与高度 |
-| 后台运行时动画冻结 | DSH 在后台（最小化/被完全遮挡）时 Chromium 暂停 rAF、定时器降到 1Hz，AudioContext 可能被系统挂起 → 动画停在半路，或卡在等语音 `onended`，回前台仍是冻结画面 | **策略：动画一旦启动就按真实时间播完，前台/后台不影响结果**（2026-11-18 用户明确要求，不要用「后台就跳过」）。① v2 时间线回前台时把隐藏时长补进播放头，跨过的 cue 静默标 fired；超过片尾则直接走完/揭幕；EDIT 预览不参与。② `playAssetAndWait` 加「素材时长 + 600ms」watchdog，AudioContext 挂起也放行。回归在 `smoke-splash-tl` |
+| 启动动画挡住 mac 标题栏 | 动画期间不能拖动窗口、双击标题栏不能最大化：root 是全屏 fixed 覆盖层，盖住了桌面端标题栏的 `-webkit-app-region: drag` 区域 | 在 root 顶部挂透明 `.dsu-dragbar`（JS 量真实 drag 区高度、应用外壳晚挂载时补测两次、兜底 44px，仅 macOS；随 root 移除）。`smoke-splash-tl` 断言热区存在与高度 |
+| 后台运行时动画冻结 | DSH 在后台（最小化/被完全遮挡）时 Chromium 暂停 rAF、定时器降到 1Hz，AudioContext 可能被系统挂起 → 动画停在半路，或卡在等语音 `onended`，回前台仍是冻结画面 | **策略：动画一旦启动就按真实时间播完，前台/后台不影响结果**（2026-11-18 用户明确要求，不要用「后台就跳过」）。① v2 时间线回前台时把隐藏时长补进播放头，跨过的 cue 静默标 fired；超过片尾则直接走完/揭幕；EDIT 预览不参与。② `playAssetAndWait` 加「素材时长 + 600ms」watchdog，AudioContext 挂起也放行。③ **三层兜底保证最终一定进 chat**：finale 30s 硬兜底、45s 无进度强制收尾、后台累计 ≥30s 回前台直接收尾（<30s 不打断；EDIT 预览不参与）。回归在 `smoke-splash-tl` |
 | 自动播放收档案卡太早 | 身份核验幕的 `hideAction()` 在 520ms 就执行，档案卡（身份名称/编号/等级）一闪而过，看不清 | 自动播放分支把收起动作挪到「台词念完 + AUTO_HOLD_EXTRA(0.5s) + AUTO_IDENTITY_EXTRA(1.5s)」之后；`smoke-splash-tl` 断言身份幕 2000ms 停留 |
 | tag 与版本号不一致 | release workflow 的 Resolve 步骤直接失败（中文报错），不会发版 | 打 tag 前先改 `package.json` version 并同步 `lib/client.js` 的 `FALLBACK_VERSION`；tag 必须是 `v`+version |
 | 手工 `gh release` 发版 | 绕过 Actions 的测试与 SHA256SUMS 校验，资产可能残缺/漏传 | 只推 tag 让 workflow 建 Release；补发用 `workflow_dispatch` |
