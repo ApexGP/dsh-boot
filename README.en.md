@@ -1,5 +1,7 @@
 # dsh-boot-suite
 
+<div align="center">
+
 [简体中文](README.md) | [English](README.en.md)
 
 > **A boot suite for DeepSeek Harness** — a cold-start animation, plus the wallpaper you live on once the chat opens.
@@ -9,9 +11,9 @@
 [![release](https://img.shields.io/github/v/release/ApexGP/dsh-boot?label=release)](https://github.com/ApexGP/dsh-boot/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-![boot animation](docs/hero.png)
-
 ![demo](docs/demo.gif)
+
+</div>
 
 > The GIF is a silent 5-second loop recorded from `preview/demo.html`; the real thing plays voice lines and UI sound effects.
 

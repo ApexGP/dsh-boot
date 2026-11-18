@@ -486,15 +486,15 @@ console.log('\n[11] v2.12.1：时间线结束不再内嵌淡出（两幕独立�
     !!timelineCode && !timelineCode.includes('dsu-out-content'),
     timelineCode ? (timelineCode.match(/.*dsu-out-content.*/) || [''])[0].trim() : 'no body')
 
-  /* 静态②：片尾分支直接 resolve，不再 later(...220) 尾巴 */
+  /* 静态②：片尾分支立即 resolve（v2.16.16 起走 finishRun()，内部同步 resolve），不再 later(...220) 尾巴 */
   let endBlock = ''
   if (timelineBody) {
     const at = timelineBody.indexOf('elapsed >= duration')
     if (at >= 0) endBlock = braceBlock(timelineBody, at)
   }
   const endCode = stripComments(endBlock)
-  check('★ 片尾分支直接 resolve()，不再等 220ms 尾巴',
-    !!endCode && /resolve\(\)/.test(endCode) && !/220/.test(endCode) && !/later\(/.test(endCode),
+  check('★ 片尾分支立即 resolve，不再等 220ms 尾巴',
+    !!endCode && /(?:resolve|finishRun)\(\)/.test(endCode) && !/220/.test(endCode) && !/later\(/.test(endCode),
     endCode.replace(/\s+/g, ' ').slice(0, 160))
 
   /* 静态③：flash 的 cover 关键帧必须单调不透明（v2.12.0 中间跌到 86% → 会透出第二幕画面） */

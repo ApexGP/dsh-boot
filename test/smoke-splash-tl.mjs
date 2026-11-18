@@ -109,6 +109,12 @@ function makeEl(tag) {
 function boot(cfgOverride, template, warnSink) {
   MARKUP = ''
   lookupCache.clear()
+  /* 可控时钟：测「后台隐藏时长补进播放头」时不需要真等 1.5s */
+  let fakeNow = Date.now()
+  class FakeDate extends Date {
+    constructor(...args) { if (args.length) super(...args); else super(fakeNow) }
+    static now() { return fakeNow }
+  }
   const root = makeEl('div')
   root._cls = 'dsu-root dsu-boot'
   const head = makeEl('head')
@@ -197,7 +203,7 @@ function boot(cfgOverride, template, warnSink) {
     document: documentStub,
     navigator: windowStub.navigator,
     console: consoleStub,
-    Promise, Object, Array, JSON, String, Number, Math, Date, Error, RegExp, isFinite,
+    Promise, Object, Array, JSON, String, Number, Math, Date: FakeDate, Error, RegExp, isFinite,
     setTimeout: windowStub.setTimeout,
     clearTimeout: windowStub.clearTimeout,
     setInterval: windowStub.setInterval,
@@ -213,7 +219,11 @@ function boot(cfgOverride, template, warnSink) {
   try {
     vm.runInContext(fs.readFileSync(BUNDLE, 'utf8'), sandbox, { filename: 'splash.js' })
   } catch (e) { thrown = e }
-  return { windowStub, root, body, rafQueue, timers, thrown, documentStub, fireDoc }
+  return {
+    windowStub, root, body, rafQueue, timers, thrown, documentStub, fireDoc,
+    advance: (ms) => { fakeNow += ms },
+    now: () => fakeNow,
+  }
 }
 
 /* ═══ 开跑 ═════════════════════════════════════════════════════════════════ */
@@ -333,36 +343,41 @@ console.log('\n=== 自动播放节拍：普通每幕额外 0.5s、身份幕合�
   check('手动确认模式身份幕不额外加时（没有 2000ms 等待）', !idManual.includes(2000), JSON.stringify(idManual.slice(0, 12)))
 }
 
-/* ═══ v2.16.16：macOS 标题栏拖拽热区 + 后台冻结保护 ═══ */
-console.log('\n=== macOS 标题栏热区 + 后台冻结保护（v2.16.16）===')
+/* ═══ v2.16.16：macOS 标题栏拖拽热区 + 后台播放策略 ═══ */
+console.log('\n=== macOS 标题栏热区 + 后台播放策略（v2.16.16）===')
 {
+  /* 标题栏热区：只验证 DOM/CSS 契约（Electron 的 drag 体现在真机验收） */
   const pg = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
   const bars = pg.root.children.filter((c) => String(c._cls || '').includes('dsu-dragbar'))
   check('macOS：启动 root 里挂了 titlebar drag 热区', bars.length === 1, pg.root.children.map((c) => c._cls).join(','))
   check('拖拽热区带兜底高度（>=38px）', !!bars[0] && parseInt(String(bars[0].style.height), 10) >= 38, bars[0] && String(bars[0].style.height))
 
+  /* 播放策略：动画启动后按真实时间播完，前后台不影响结果。
+     窗口隐藏 1.5s → 回前台时把隐藏时长补进播放头 → 时间线直接走完并进入转场，
+     而不是停在中途，也不会被提前跳过。 */
   const pg2 = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
-  await flush()
-  pg2.documentStub.hidden = true
-  pg2.fireDoc('visibilitychange')
-  const bgTimer = pg2.timers.find((t) => t.ms === 1200)
-  check('窗口隐藏后登记 1.2s 后台跳过定时器', !!bgTimer, JSON.stringify(pg2.timers.slice(0, 14).map((t) => t.ms)))
-  if (bgTimer) {
-    const i = pg2.timers.indexOf(bgTimer)
-    if (i >= 0) pg2.timers.splice(i, 1)
-    try { bgTimer.fn() } catch (e) { /* 收尾异常由 splash 自己兜底 */ }
+  const pumpPage = (p, n) => {
+    let t = p.__t || 0
+    for (let i = 0; i < n; i++) {
+      t += 16
+      const cbs = p.rafQueue.splice(0, p.rafQueue.length)
+      cbs.forEach((fn) => fn(t))
+    }
+    p.__t = t
   }
   await flush()
-  check('后台超过 1.2s → 动画直接收尾（root 进入 dsu-gone）', /dsu-gone/.test(pg2.root._cls), pg2.root._cls)
-
-  const pg3 = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
-  await flush()
-  pg3.documentStub.hidden = true
-  pg3.fireDoc('visibilitychange')
-  pg3.documentStub.hidden = false
-  pg3.fireDoc('visibilitychange')
-  await flush()
-  check('短暂切走再回来不跳过动画（root 未 dsu-gone）', !/dsu-gone/.test(pg3.root._cls), pg3.root._cls)
+  pumpPage(pg2, 4)                 /* 先跑几帧：elapsed ≈ 64ms */
+  pg2.documentStub.hidden = true
+  pg2.fireDoc('visibilitychange')
+  pg2.advance(1500)                /* 后台 1.5s：rAF 被暂停，但时间在走 */
+  pg2.documentStub.hidden = false
+  pg2.fireDoc('visibilitychange')
+  check('后台回来不提前跳收：root 未 dsu-gone', !/dsu-gone/.test(pg2.root._cls), pg2.root._cls)
+  pumpPage(pg2, 3)
+  await flush(); await flush(); await flush()
+  const bgState = pg2.windowStub.__DSH_TRANSITION_STATE__ || {}
+  check('后台时长计入播放头：回前台后时间线直接走完并进入片尾转场',
+    bgState.lastType === 'flash', JSON.stringify({ lastType: bgState.lastType, overlays: bgState.overlays }))
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)
