@@ -20,7 +20,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # 2026-11：新增「测试（macos-latest）」作业连续两次等不到 runner（runner_id=0，
+        # 排队 15 分钟后被 GitHub 取消，无日志）。actions/runner-images 已把
+        # macos-latest 指向刚上线、容量不足的 macOS 26 Arm64 镜像；固定到稳定的
+        # macos-15（macOS 15 Arm64）即可正常调度。macos-14 已于 2026-11-02 退役。
+        os: [ubuntu-latest, windows-latest, macos-15]
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
