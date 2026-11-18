@@ -116,8 +116,10 @@ function boot(cfgOverride, template, warnSink) {
   const htmlEl = makeEl('html')
   const rafQueue = []
 
+  const docListeners = {}
   const documentStub = {
     readyState: 'complete',
+    hidden: false,
     head, body,
     documentElement: htmlEl,
     getElementById: (id) => (id === 'dsh-startup-root' ? root : null),
@@ -127,8 +129,16 @@ function boot(cfgOverride, template, warnSink) {
     createTextNode: (t) => { const n = makeEl('#text'); n.textContent = String(t); return n },
     querySelector: () => null,
     querySelectorAll: () => [],
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener(type, fn) { (docListeners[type] || (docListeners[type] = [])).push(fn) },
+    removeEventListener(type, fn) {
+      const list = docListeners[type] || []
+      const i = list.indexOf(fn)
+      if (i >= 0) list.splice(i, 1)
+    },
+  }
+  const fireDoc = (type) => {
+    const list = (docListeners[type] || []).slice()
+    list.forEach((fn) => { try { fn({ type }) } catch (e) { /* 测试里不吞真实异常也无妨 */ } })
   }
 
   const timers = []
@@ -150,6 +160,8 @@ function boot(cfgOverride, template, warnSink) {
       }
     },
     location: { host: '127.0.0.1:3080', href: 'http://127.0.0.1:3080/' },
+    /* 桌面端标题栏热区只认 macOS；测试机就是 mac，这里固定成 Mac 环境 */
+    navigator: { platform: 'MacIntel', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)' },
     addEventListener() {}, removeEventListener() {}, dispatchEvent() {},
     sessionStorage: { getItem: () => null, setItem() {} },
     localStorage: { getItem: () => null, setItem() {} },
@@ -183,6 +195,7 @@ function boot(cfgOverride, template, warnSink) {
   const sandbox = {
     window: windowStub,
     document: documentStub,
+    navigator: windowStub.navigator,
     console: consoleStub,
     Promise, Object, Array, JSON, String, Number, Math, Date, Error, RegExp, isFinite,
     setTimeout: windowStub.setTimeout,
@@ -200,7 +213,7 @@ function boot(cfgOverride, template, warnSink) {
   try {
     vm.runInContext(fs.readFileSync(BUNDLE, 'utf8'), sandbox, { filename: 'splash.js' })
   } catch (e) { thrown = e }
-  return { windowStub, root, body, rafQueue, timers, thrown }
+  return { windowStub, root, body, rafQueue, timers, thrown, documentStub, fireDoc }
 }
 
 /* ═══ 开跑 ═════════════════════════════════════════════════════════════════ */
@@ -318,6 +331,38 @@ console.log('\n=== 自动播放节拍：普通每幕额外 0.5s、身份幕合�
   check('★ 自动播放身份核验幕：档案卡停留 = 普通 500 + 身份 1500 = 2000ms', idAuto.includes(2000), JSON.stringify(idAuto.slice(0, 18)))
   const idManual = await collect(boot({ sound: false, voice: false, requireInteraction: true, allowSkip: true, speed: 1 }, idTpl), 520, 12)
   check('手动确认模式身份幕不额外加时（没有 2000ms 等待）', !idManual.includes(2000), JSON.stringify(idManual.slice(0, 12)))
+}
+
+/* ═══ v2.16.16：macOS 标题栏拖拽热区 + 后台冻结保护 ═══ */
+console.log('\n=== macOS 标题栏热区 + 后台冻结保护（v2.16.16）===')
+{
+  const pg = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
+  const bars = pg.root.children.filter((c) => String(c._cls || '').includes('dsu-dragbar'))
+  check('macOS：启动 root 里挂了 titlebar drag 热区', bars.length === 1, pg.root.children.map((c) => c._cls).join(','))
+  check('拖拽热区带兜底高度（>=38px）', !!bars[0] && parseInt(String(bars[0].style.height), 10) >= 38, bars[0] && String(bars[0].style.height))
+
+  const pg2 = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
+  await flush()
+  pg2.documentStub.hidden = true
+  pg2.fireDoc('visibilitychange')
+  const bgTimer = pg2.timers.find((t) => t.ms === 1200)
+  check('窗口隐藏后登记 1.2s 后台跳过定时器', !!bgTimer, JSON.stringify(pg2.timers.slice(0, 14).map((t) => t.ms)))
+  if (bgTimer) {
+    const i = pg2.timers.indexOf(bgTimer)
+    if (i >= 0) pg2.timers.splice(i, 1)
+    try { bgTimer.fn() } catch (e) { /* 收尾异常由 splash 自己兜底 */ }
+  }
+  await flush()
+  check('后台超过 1.2s → 动画直接收尾（root 进入 dsu-gone）', /dsu-gone/.test(pg2.root._cls), pg2.root._cls)
+
+  const pg3 = boot({ transitionIn: 'none', transitionJoin: 'none', transitionOut: 'flash', transitionMs: 600 }, tlTpl)
+  await flush()
+  pg3.documentStub.hidden = true
+  pg3.fireDoc('visibilitychange')
+  pg3.documentStub.hidden = false
+  pg3.fireDoc('visibilitychange')
+  await flush()
+  check('短暂切走再回来不跳过动画（root 未 dsu-gone）', !/dsu-gone/.test(pg3.root._cls), pg3.root._cls)
 }
 
 console.log(`\n${fail === 0 ? '✓ 全部通过' : `✗ ${fail} 项失败`}（${pass} 项通过）\n`)

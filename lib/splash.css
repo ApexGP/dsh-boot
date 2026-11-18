@@ -20,6 +20,22 @@
   padding: 0;
 }
 
+/* ── macOS 桌面端标题栏热区（v2.16.16）────────────────────────────────────
+   启动动画 root 是全屏 fixed 覆盖层，会把 DSH 桌面端标题栏的
+   -webkit-app-region: drag 区域一起盖住 —— 动画期间拖动窗口、双击标题栏
+   最大化全部失效。这里在顶部铺一条透明 drag 热区，把窗口拖动/双击缩放
+   交还给原生窗口；高度在 JS 里按实际标题栏测量（兜底 38px）。 */
+#dsh-startup-root .dsu-dragbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  z-index: 2147483550;
+  -webkit-app-region: drag;
+  background: transparent;
+}
+
 #dsh-startup-root {
   /* —— 配色（浅色 / 参考片色板）—— */
   --dsu-bg: #e5e3df;

@@ -19,13 +19,13 @@ GitHub Actions（`.github/workflows/release.yml`）自动跑测试并产出四�
 
 ## DSH-Store 预检现状（issue #1760，2026-11-05）
 
-自动预检报 `SUBMISSION_SCAN_INCOMPLETE`。已用 DSH-Store 仓库同版本扫描模块在本地复现（不需要猜），v2.16.15 剩余三项：
+自动预检报 `SUBMISSION_SCAN_INCOMPLETE`。已用 DSH-Store 仓库同版本扫描模块在本地复现（不需要猜），v2.16.16 剩余三项：
 
 1. `package contains unsupported artifacts requiring review` —— 必需音视频素材（mp3/wav/mp4，约 133 个）不在扫描器静态放行类型（只放行图片/字体/文本/样式）；这些是启动动画配音、循环视频与内置模板的核心内容。
 2. `dynamic module loading or code evaluation requires separate review` —— `lib/client.js` 自举 `loadScript()` 与 `lib/splash.js` 的 `injectSelf()` 用 `document.createElement('script')` 挂固定 Host 路由的 splash.js（首帧兜底 / 预览重播）。
 3. 2 条 `warning/shell/child-process` —— 仅用于「打开目录」与「自动更新器」，参数为固定数组。
 
-已做整改：`package.json files` 只保留运行时（扫描面 96→70 个源码文件、告警 9→2）、Windows 更新器去掉 `shell: true`、版本升到 2.16.15（2.16.14 已发布；本版删除过渡兼容垫片）。
+已做整改：`package.json files` 只保留运行时（扫描面 96→70 个源码文件、告警 9→2）、Windows 更新器去掉 `shell: true`、版本升到 2.16.16（2.16.15 已发布；本版修 mac 标题栏拖拽与后台动画冻结）。
 按 `registry/README.md` 的 bounded-source 政策，扫描预算/覆盖/文件类型限制的责任方是 `store-scanner`，且「不要求作者拆包、压缩或删除功能」→ 走**人工准入复核**，不要删音频/视频或自举功能去过检。
 
 重新触发预检：push 新 commit 后编辑 Issue #1760（任何编辑都会重跑）。回复模板见 `issue-reply-1760.md`。
